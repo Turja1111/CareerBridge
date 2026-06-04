@@ -1,0 +1,52 @@
+# ============================================================
+#  CareerBridge — .gitignore
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Environment & Secrets
+.env
+.env.local
+.env.production
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+
+# LinkedIn Session (sensitive)
+linkedin_session/
+*.json.bak
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker
+*.log
+
+# Celery
+celerybeat-schedule
+celerybeat.pid

@@ -1,0 +1,110 @@
+services:
+  # ─────────────── PostgreSQL ───────────────
+  db:
+    image: postgres:16-alpine
+    container_name: CareerBridge-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: "${DB_NAME:-Linkedin Job Alert}"
+      POSTGRES_USER: "${DB_USER:-postgres}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-Admin}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      # Use CMD-SHELL and quote variables so names with spaces don't split into args
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────── Redis ───────────────
+  redis:
+    image: redis:7-alpine
+    container_name: CareerBridge-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─────────────── Django Web Server ───────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: CareerBridge-web
+    restart: unless-stopped
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - DB_HOST=db
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-Admin}@db:5432/Linkedin%20Job%20Alert
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app                          # Live reload in dev
+      - playwright_sessions:/app/linkedin_session
+      - static_files:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ─────────────── Celery Worker ───────────────
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: CareerBridge-worker
+    restart: unless-stopped
+    command: celery -A careerbridge worker -l info --concurrency=2
+    env_file: .env
+    environment:
+      - DB_HOST=db
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-Admin}@db:5432/Linkedin%20Job%20Alert
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - playwright_sessions:/app/linkedin_session
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ─────────────── Celery Beat Scheduler ───────────────
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: CareerBridge-beat
+    restart: unless-stopped
+    command: celery -A careerbridge beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file: .env
+    environment:
+      - DB_HOST=db
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-Admin}@db:5432/Linkedin%20Job%20Alert
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:       # Persistent DB data across restarts
+  redis_data:          # Redis persistence (optional AOF/RDB)
+  playwright_sessions: # LinkedIn browser session cookies
+  static_files:        # Django collectstatic output

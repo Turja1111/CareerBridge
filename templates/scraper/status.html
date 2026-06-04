@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Scraper Control Panel — CareerBridge{% endblock %}
+
+{% block header_title %}Scraper Control Panel{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+    <!-- Left Column: Status, Control & Logs -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Current Status Panel -->
+        <div class="glass-panel" style="padding: 24px; position: relative; overflow: hidden;">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i data-lucide="activity" style="color: var(--color-new);"></i> Live Engine Monitor
+                </h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;">
+                <div style="padding: 16px; background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
+                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Engine State</div>
+                    <span id="engine-state-text" style="font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                        {% if is_running %}
+                            <span class="status-indicator running"></span> Running Scrape
+                        {% else %}
+                            <span class="status-indicator idle" style="background-color: var(--text-secondary);"></span> Idle
+                        {% endif %}
+                    </span>
+                </div>
+                <div style="padding: 16px; background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
+                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Last Successful Run</div>
+                    <span id="last-success-time" style="font-weight: 600; font-size: 14px;">
+                        {% if last_success %}
+                            {{ last_success.finished_at|date:"M d, H:i" }}
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </span>
+                </div>
+                <div style="padding: 16px; background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
+                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Last Jobs Harvested</div>
+                    <span id="last-success-jobs" style="font-weight: 600; font-size: 14px; color: var(--color-new);">
+                        {% if last_success %}
+                            {{ last_success.jobs_new }} new / {{ last_success.jobs_found }} total
+                        {% else %}
+                            —
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button id="trigger-scrape-btn" class="btn btn-primary" {% if is_running %}disabled{% endif %} style="padding: 12px 24px; border-radius: 10px;">
+                    <i data-lucide="play" id="trigger-btn-icon"></i> <span id="trigger-btn-text">Trigger Scraper Now</span>
+                </button>
+                <span id="trigger-status-msg" style="font-size: 13px; color: var(--text-secondary);">
+                    {% if is_running %}Background process running. Real-time updates active.{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Recent Logs Table -->
+        <div class="glass-panel" style="padding: 24px;">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i data-lucide="scroll" style="color: var(--color-brand);"></i> Execution Log (Last 20 Runs)
+                </h3>
+            </div>
+            
+            <div style="overflow-x: auto; width: 100%;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">
+                            <th style="padding: 12px 8px;">Run Time</th>
+                            <th style="padding: 12px 8px;">Trigger</th>
+                            <th style="padding: 12px 8px;">Status</th>
+                            <th style="padding: 12px 8px;">Found / New</th>
+                            <th style="padding: 12px 8px;">Duration</th>
+                            <th style="padding: 12px 8px;">Info / Error</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-table-body">
+                        {% for log in logs %}
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px 8px; font-weight: 500;">{{ log.started_at|date:"M d, H:i:s" }}</td>
+                            <td style="padding: 12px 8px; text-transform: capitalize;">{{ log.triggered_by }}</td>
+                            <td style="padding: 12px 8px;">
+                                <span class="badge badge-{% if log.status == 'success' %}new{% elif log.status == 'running' %}applied{% else %}ignored{% endif %}">
+                                    {{ log.status|upper }}
+                                </span>
+                            </td>
+                            <td style="padding: 12px 8px;">{{ log.jobs_found }} / {{ log.jobs_new }}</td>
+                            <td style="padding: 12px 8px;">{{ log.duration|default:"—" }}s</td>
+                            <td style="padding: 12px 8px; color: {% if log.status == 'failed' %}var(--color-ignored){% else %}var(--text-secondary){% endif %}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ log.error_message }}">
+                                {{ log.error_message|default:"Success" }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                                No execution logs available.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Preferences Form -->
+    <div class="glass-panel" style="padding: 24px; height: fit-content;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-lucide="settings" style="color: var(--color-saved);"></i> Search Preferences
+            </h3>
+        </div>
+        
+        <form id="preferences-form" style="display: flex; flex-direction: column; gap: 20px; font-size: 14px;">
+            {% csrf_token %}
+            <div>
+                <label for="pref-keywords" style="display: block; font-weight: 600; margin-bottom: 6px;">Job Keywords</label>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Comma-separated search keywords (e.g. Python Developer, Django)</div>
+                <input type="text" id="pref-keywords" class="form-select" style="width: 100%;" value="{% for kw in preferences.keywords %}{{ kw }}{% if not forloop.last %}, {% endif %}{% empty %}Python Developer{% endfor %}">
+            </div>
+
+            <div>
+                <label for="pref-locations" style="display: block; font-weight: 600; margin-bottom: 6px;">Locations</label>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Comma-separated locations (e.g. Bangladesh, Remote)</div>
+                <input type="text" id="pref-locations" class="form-select" style="width: 100%;" value="{% for loc in preferences.locations %}{{ loc }}{% if not forloop.last %}, {% endif %}{% empty %}Bangladesh, Remote{% endfor %}">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Work Types</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="work_types" value="Remote" {% if 'Remote' in preferences.work_types or not preferences %}checked{% endif %}> Remote
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="work_types" value="Hybrid" {% if 'Hybrid' in preferences.work_types or not preferences %}checked{% endif %}> Hybrid
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="work_types" value="On-site" {% if 'On-site' in preferences.work_types or not preferences %}checked{% endif %}> On-site
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Experience Levels</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="experience_level" value="Entry" {% if 'Entry' in preferences.experience_level or not preferences %}checked{% endif %}> Entry Level
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="experience_level" value="Mid" {% if 'Mid' in preferences.experience_level or not preferences %}checked{% endif %}> Mid Level
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="experience_level" value="Senior" {% if 'Senior' in preferences.experience_level or not preferences %}checked{% endif %}> Senior Level
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="experience_level" value="Lead" {% if 'Lead' in preferences.experience_level or not preferences %}checked{% endif %}> Lead / Director
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-secondary" style="width: 100%; padding: 12px; margin-top: 10px; font-size: 14px;">
+                <i data-lucide="save"></i> Save Preferences
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Import scraper interaction JS -->
+<script src="{% static 'js/scraper.js' %}"></script>
+{% endblock %}

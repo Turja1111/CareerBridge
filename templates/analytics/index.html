@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Market Analytics — CareerBridge{% endblock %}
+
+{% block header_title %}Market Intelligence Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+    
+    @media (max-width: 1024px) {
+        .chart-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .chart-card {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        min-height: 380px;
+    }
+    
+    .chart-container {
+        flex-grow: 1;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- KPI Summary Row -->
+<div class="kpi-grid">
+    <div class="glass-panel kpi-card">
+        <div class="kpi-title">Total Active Postings</div>
+        <div class="kpi-value">{{ stats.total_jobs }}</div>
+        <div class="kpi-trend" style="color: var(--text-secondary);">
+            <i data-lucide="bar-chart-2" style="width: 14px; height: 14px;"></i> Total sample size
+        </div>
+    </div>
+    
+    <div class="glass-panel kpi-card">
+        <div class="kpi-title">New Jobs Today</div>
+        <div class="kpi-value" style="color: var(--color-new);">+{{ stats.new_today }}</div>
+        <div class="kpi-trend">
+            <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i> Added in last 24h
+        </div>
+    </div>
+
+    <div class="glass-panel kpi-card">
+        <div class="kpi-title">Total Companies</div>
+        <div class="kpi-value">{{ stats.total_companies }}</div>
+        <div class="kpi-trend" style="color: var(--text-secondary);">
+            <i data-lucide="building-2" style="width: 14px; height: 14px;"></i> Distinct employers
+        </div>
+    </div>
+
+    <div class="glass-panel kpi-card">
+        <div class="kpi-title">Most Common Keyword</div>
+        <div class="kpi-value" style="color: var(--color-saved); font-size: 26px; padding-top: 6px; padding-bottom: 6px;">{{ stats.top_skill }}</div>
+        <div class="kpi-trend" style="color: var(--color-saved);">
+            <i data-lucide="award" style="width: 14px; height: 14px;"></i> Top requested skill
+        </div>
+    </div>
+
+    <div class="glass-panel kpi-card">
+        <div class="kpi-title">Avg Skills per Post</div>
+        <div class="kpi-value">{{ stats.avg_skills_per_job }}</div>
+        <div class="kpi-trend" style="color: var(--text-secondary);">
+            <i data-lucide="book-open" style="width: 14px; height: 14px;"></i> Skill density index
+        </div>
+    </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="chart-grid">
+    <!-- Chart 1: Skills Demand -->
+    <div class="glass-panel chart-card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-lucide="bar-chart-3" style="color: var(--color-brand);"></i> Top In-Demand Skills
+            </h3>
+        </div>
+        <div class="chart-container" id="topSkillsChart"></div>
+    </div>
+
+    <!-- Chart 2: Jobs Over Time -->
+    <div class="glass-panel chart-card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-lucide="calendar" style="color: var(--color-new);"></i> Jobs Posted Over Time
+            </h3>
+        </div>
+        <div class="chart-container" id="jobsOverTimeChart"></div>
+    </div>
+
+    <!-- Chart 3: Work Type -->
+    <div class="glass-panel chart-card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-lucide="pie-chart" style="color: var(--color-applied);"></i> Work Type Distribution
+            </h3>
+        </div>
+        <div class="chart-container" id="workTypeDistributionChart"></div>
+    </div>
+
+    <!-- Chart 4: Salary Ranges -->
+    <div class="glass-panel chart-card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-lucide="dollar-sign" style="color: var(--color-saved);"></i> Salary Ranges by Job Title
+            </h3>
+        </div>
+        <div class="chart-container" id="salaryRangesChart"></div>
+    </div>
+
+    <!-- Chart 5: Top Hiring Companies -->
+    <div class="glass-panel chart-card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-lucide="building" style="color: var(--color-brand);"></i> Top Hiring Companies
+            </h3>
+        </div>
+        <div class="chart-container" id="topCompaniesChart"></div>
+    </div>
+
+    <!-- Chart 6: Top Locations -->
+    <div class="glass-panel chart-card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-lucide="map-pin" style="color: var(--color-new);"></i> Job Locations
+            </h3>
+        </div>
+        <div class="chart-container" id="topLocationsChart"></div>
+    </div>
+
+    <!-- Chart 7: Skills by Experience Level -->
+    <div class="glass-panel chart-card" style="grid-column: span 2;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-lucide="trending-up" style="color: var(--color-applied);"></i> Top Skills by Experience Level
+            </h3>
+        </div>
+        <div class="chart-container" id="skillsByExperienceChart"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include ApexCharts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<!-- Include our custom charts loader -->
+<script src="{% static 'js/charts.js' %}"></script>
+{% endblock %}

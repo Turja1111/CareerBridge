@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Job Board — CareerBridge{% endblock %}
+
+{% block header_title %}Job Board{% endblock %}
+
+{% block content %}
+<div class="job-board-container" style="display: grid; grid-template-columns: 1fr 3fr; gap: 30px;">
+    <!-- Sidebar Filters & Stats -->
+    <div class="sidebar-filters" style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Status Filter Box -->
+        <div class="glass-panel" style="padding: 20px;">
+            <h3 class="card-title" style="font-size: 14px; margin-bottom: 14px;">
+                <i data-lucide="filter" style="color: var(--color-brand); width: 16px; height: 16px;"></i> Job Status
+            </h3>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+                <li>
+                    <a href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if work_type %}work_type={{ work_type }}&{% endif %}{% if experience_filter %}experience={{ experience_filter }}&{% endif %}" class="sidebar-link {% if not status_filter %}active{% endif %}" style="padding: 6px 12px; border-radius: 8px;">
+                        <span>All Jobs</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.08); margin-left: auto;">{{ total_jobs }}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="?status=saved&{% if search_query %}search={{ search_query }}&{% endif %}{% if work_type %}work_type={{ work_type }}&{% endif %}{% if experience_filter %}experience={{ experience_filter }}&{% endif %}" class="sidebar-link {% if status_filter == 'saved' %}active{% endif %}" style="padding: 6px 12px; border-radius: 8px;">
+                        <span>Saved</span>
+                        <span class="badge badge-saved" style="margin-left: auto;" id="saved-count-badge">{{ saved_count }}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="?status=applied&{% if search_query %}search={{ search_query }}&{% endif %}{% if work_type %}work_type={{ work_type }}&{% endif %}{% if experience_filter %}experience={{ experience_filter }}&{% endif %}" class="sidebar-link {% if status_filter == 'applied' %}active{% endif %}" style="padding: 6px 12px; border-radius: 8px;">
+                        <span>Applied</span>
+                        <span class="badge badge-applied" style="margin-left: auto;" id="applied-count-badge">{{ applied_count }}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="?status=ignored&{% if search_query %}search={{ search_query }}&{% endif %}{% if work_type %}work_type={{ work_type }}&{% endif %}{% if experience_filter %}experience={{ experience_filter }}&{% endif %}" class="sidebar-link {% if status_filter == 'ignored' %}active{% endif %}" style="padding: 6px 12px; border-radius: 8px;">
+                        <span>Ignored</span>
+                        <span class="badge badge-ignored" style="margin-left: auto;" id="ignored-count-badge">{{ ignored_count }}</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Top Companies Filters -->
+        <div class="glass-panel" style="padding: 20px;">
+            <h3 class="card-title" style="font-size: 14px; margin-bottom: 14px;">
+                <i data-lucide="building-2" style="color: var(--color-applied); width: 16px; height: 16px;"></i> Top Companies
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; max-height: 240px; overflow-y: auto; padding-right: 4px;">
+                {% for company in companies_list %}
+                <a href="?company={{ company.name|urlencode }}&{% if status_filter %}status={{ status_filter }}&{% endif %}{% if work_type %}work_type={{ work_type }}&{% endif %}" class="sidebar-link {% if company_filter == company.name %}active{% endif %}" style="padding: 4px 8px; border-radius: 6px; display: flex; justify-content: space-between;">
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">{{ company.name }}</span>
+                    <span class="badge" style="background: rgba(255,255,255,0.05); font-size: 10px;">{{ company.job_count }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Top Skills Filters -->
+        <div class="glass-panel" style="padding: 20px;">
+            <h3 class="card-title" style="font-size: 14px; margin-bottom: 14px;">
+                <i data-lucide="tag" style="color: var(--color-saved); width: 16px; height: 16px;"></i> Top Skills
+            </h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                {% for skill in skills_list %}
+                <a href="?skill={{ skill.name|urlencode }}&{% if status_filter %}status={{ status_filter }}&{% endif %}{% if work_type %}work_type={{ work_type }}&{% endif %}" class="skill-pill hover-grow {% if skill_filter == skill.name %}active{% endif %}" style="font-size: 11px; padding: 4px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; {% if skill_filter == skill.name %}background-color: var(--color-brand); color: white; border-color: var(--color-brand);{% endif %}">
+                    <span>{{ skill.name }}</span>
+                    <span style="opacity: 0.6; font-size: 9px;">({{ skill.job_count }})</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Job Postings Section -->
+    <div class="job-list-section">
+        <!-- Search & Filter Controls -->
+        <form method="GET" class="glass-panel" style="padding: 16px; margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <!-- Carry status and tags in hidden inputs so filters don't get cleared -->
+            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            {% if skill_filter %}<input type="hidden" name="skill" value="{{ skill_filter }}">{% endif %}
+            {% if company_filter %}<input type="hidden" name="company" value="{{ company_filter }}">{% endif %}
+            
+            <div class="search-container" style="width: 280px; margin-bottom: 0;">
+                <i data-lucide="search" style="color: var(--text-secondary); width: 18px; height: 18px;"></i>
+                <input type="text" name="search" class="search-input" placeholder="Search title, company, description..." value="{{ search_query }}">
+            </div>
+
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <select name="work_type" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Work Types</option>
+                    <option value="Remote" {% if work_type == 'Remote' %}selected{% endif %}>Remote</option>
+                    <option value="Hybrid" {% if work_type == 'Hybrid' %}selected{% endif %}>Hybrid</option>
+                    <option value="On-site" {% if work_type == 'On-site' %}selected{% endif %}>On-site</option>
+                </select>
+
+                <select name="experience" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Experience Levels</option>
+                    <option value="Entry" {% if experience_filter == 'Entry' %}selected{% endif %}>Entry Level</option>
+                    <option value="Mid" {% if experience_filter == 'Mid' %}selected{% endif %}>Mid Level</option>
+                    <option value="Senior" {% if experience_filter == 'Senior' %}selected{% endif %}>Senior Level</option>
+                    <option value="Lead" {% if experience_filter == 'Lead' %}selected{% endif %}>Lead / Manager</option>
+                </select>
+
+                <select name="sort" class="form-select" onchange="this.form.submit()">
+                    <option value="-scraped_at" {% if sort_by == '-scraped_at' %}selected{% endif %}>Newest Scraped</option>
+                    <option value="-date_posted" {% if sort_by == '-date_posted' %}selected{% endif %}>Newest Posted</option>
+                    <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Job Title (A-Z)</option>
+                    <option value="company__name" {% if sort_by == 'company__name' %}selected{% endif %}>Company (A-Z)</option>
+                </select>
+                
+                {% if search_query or work_type or experience_filter or skill_filter or company_filter %}
+                <a href="?" class="btn btn-secondary" style="padding: 10px 14px;" title="Reset filters">
+                    <i data-lucide="x-circle" style="width: 16px; height: 16px;"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+
+        <!-- Active Filter Pills -->
+        {% if skill_filter or company_filter %}
+        <div style="display: flex; gap: 8px; margin-bottom: 20px; align-items: center;">
+            <span style="font-size: 13px; color: var(--text-secondary);">Active filter:</span>
+            {% if skill_filter %}
+                <span class="badge badge-exp" style="display: inline-flex; align-items: center; gap: 6px;">
+                    Skill: {{ skill_filter }}
+                    <a href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if work_type %}work_type={{ work_type }}&{% endif %}" style="display: flex; align-items: center;"><i data-lucide="x" style="width: 12px; height: 12px;"></i></a>
+                </span>
+            {% endif %}
+            {% if company_filter %}
+                <span class="badge badge-applied" style="display: inline-flex; align-items: center; gap: 6px;">
+                    Company: {{ company_filter }}
+                    <a href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if work_type %}work_type={{ work_type }}&{% endif %}" style="display: flex; align-items: center;"><i data-lucide="x" style="width: 12px; height: 12px;"></i></a>
+                </span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Job Board List -->
+        <div class="jobs-board-list">
+            {% for job in page_obj %}
+            <div class="job-item hover-grow" id="job-card-{{ job.pk }}">
+                <div class="job-info">
+                    <div class="company-logo">
+                        {% if job.company.logo_url %}
+                            <img src="{{ job.company.logo_url }}" alt="{{ job.company.name }}">
+                        {% else %}
+                            {{ job.company.name|slice:":2"|upper }}
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <a href="{% url 'jobs:detail' job.pk %}" class="job-meta-title" style="margin-bottom: 0;">{{ job.title }}</a>
+                            {% if job.is_new %}
+                                <span class="badge badge-new" style="font-size: 9px; padding: 2px 6px;">NEW</span>
+                            {% endif %}
+                            <span class="badge badge-status badge-{% if job.status == 'new' %}new{% elif job.status == 'saved' %}saved{% elif job.status == 'applied' %}applied{% else %}ignored{% endif %}" id="status-badge-{{ job.pk }}">
+                                {{ job.status|upper }}
+                            </span>
+                        </div>
+                        <div class="job-meta-subtitle" style="margin-top: 6px;">
+                            <span>{{ job.company.name }}</span>
+                            <span>📍 {{ job.location }}</span>
+                            <span>📅 {{ job.date_posted|date:"M d, Y" }}</span>
+                        </div>
+                        
+                        <div class="job-tags" style="margin-top: 8px;">
+                            <span class="badge badge-worktype">{{ job.work_type }}</span>
+                            {% if job.experience_level %}
+                                <span class="badge badge-exp">{{ job.experience_level }}</span>
+                            {% endif %}
+                            {% if job.salary_display %}
+                                <span class="badge badge-saved" style="background: rgba(245, 158, 11, 0.1); color: var(--color-saved);">{{ job.salary_display }}</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Skill keywords -->
+                        <div class="skills-container">
+                            {% for skill in job.skills.all %}
+                                <span class="skill-pill">{{ skill.name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Status Switcher Actions -->
+                <div class="job-actions" style="flex-direction: column; gap: 10px; align-items: flex-end;">
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn-icon status-update-btn {% if job.status == 'saved' %}active{% endif %}" data-job-id="{{ job.pk }}" data-status="saved" title="Save job" style="padding: 8px; border-radius: 8px; {% if job.status == 'saved' %}border-color: var(--color-saved); color: var(--color-saved); background: var(--bg-saved-light);{% endif %}">
+                            <i data-lucide="star" style="width: 15px; height: 15px;"></i>
+                        </button>
+                        <button class="btn-icon status-update-btn {% if job.status == 'applied' %}active{% endif %}" data-job-id="{{ job.pk }}" data-status="applied" title="Mark as applied" style="padding: 8px; border-radius: 8px; {% if job.status == 'applied' %}border-color: var(--color-applied); color: var(--color-applied); background: var(--bg-applied-light);{% endif %}">
+                            <i data-lucide="check-circle-2" style="width: 15px; height: 15px;"></i>
+                        </button>
+                        <button class="btn-icon status-update-btn {% if job.status == 'ignored' %}active{% endif %}" data-job-id="{{ job.pk }}" data-status="ignored" title="Ignore job" style="padding: 8px; border-radius: 8px; {% if job.status == 'ignored' %}border-color: var(--color-ignored); color: var(--color-ignored); background: var(--bg-ignored-light);{% endif %}">
+                            <i data-lucide="eye-off" style="width: 15px; height: 15px;"></i>
+                        </button>
+                    </div>
+                    
+                    <a href="{% url 'jobs:detail' job.pk %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; border-radius: 8px;">
+                        Details <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="glass-panel" style="text-align: center; padding: 60px; color: var(--text-secondary);">
+                <i data-lucide="alert-circle" style="width: 54px; height: 54px; margin-bottom: 16px; color: var(--text-muted);"></i>
+                <h3>No jobs found matching filters</h3>
+                <p style="margin-top: 8px;">Try clearing search keywords or selecting different filters.</p>
+                <a href="?" class="btn btn-primary" style="margin-top: 16px;">Clear Filters</a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if work_type %}&work_type={{ work_type }}{% endif %}{% if experience_filter %}&experience={{ experience_filter }}{% endif %}{% if skill_filter %}&skill={{ skill_filter }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="page-btn">
+                    <i data-lucide="chevron-left" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+                </a>
+            {% else %}
+                <span class="page-btn disabled"><i data-lucide="chevron-left" style="width: 14px; height: 14px; vertical-align: middle;"></i></span>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="page-btn active">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if work_type %}&work_type={{ work_type }}{% endif %}{% if experience_filter %}&experience={{ experience_filter }}{% endif %}{% if skill_filter %}&skill={{ skill_filter }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="page-btn">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if work_type %}&work_type={{ work_type }}{% endif %}{% if experience_filter %}&experience={{ experience_filter }}{% endif %}{% if skill_filter %}&skill={{ skill_filter }}{% endif %}{% if company_filter %}&company={{ company_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="page-btn">
+                    <i data-lucide="chevron-right" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+                </a>
+            {% else %}
+                <span class="page-btn disabled"><i data-lucide="chevron-right" style="width: 14px; height: 14px; vertical-align: middle;"></i></span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Import jobs interaction JS -->
+<script src="{% static 'js/jobs.js' %}"></script>
+{% endblock %}

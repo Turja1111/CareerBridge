@@ -1,0 +1,98 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CareerBridge — Personal Job Intelligence{% endblock %}</title>
+    
+    <!-- CSS files -->
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link rel="stylesheet" href="{% static 'css/animations.css' %}">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <i data-lucide="briefcase" style="color: #6366f1; width: 26px; height: 26px;"></i>
+                <span class="sidebar-logo-text">CareerBridge</span>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="{% url 'dashboard:index' %}" class="sidebar-link {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+                        <i data-lucide="layout-dashboard"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'jobs:list' %}" class="sidebar-link {% if request.resolver_match.app_name == 'jobs' %}active{% endif %}">
+                        <i data-lucide="search-code"></i>
+                        <span>Job Board</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'analytics:dashboard' %}" class="sidebar-link {% if request.resolver_match.app_name == 'analytics' %}active{% endif %}">
+                        <i data-lucide="bar-chart-3"></i>
+                        <span>Analytics</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'scraper:status' %}" class="sidebar-link {% if request.resolver_match.app_name == 'scraper' %}active{% endif %}">
+                        <i data-lucide="terminal"></i>
+                        <span>Scraper Control</span>
+                    </a>
+                </li>
+                
+                <li style="margin-top: auto;">
+                    <a href="/admin/" class="sidebar-link" target="_blank">
+                        <i data-lucide="shield-check"></i>
+                        <span>Admin Panel</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <p>CareerBridge v1.0.0</p>
+                <p>&copy; 2026</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-title">
+                    {% block header_title %}CareerBridge Dashboard{% endblock %}
+                </div>
+                
+                <div class="header-actions">
+                    <!-- Quick stats or user panel -->
+                    <span style="font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="status-indicator idle" style="background-color: var(--color-new);"></span>
+                        Live Session
+                    </span>
+                    <a href="{% url 'scraper:status' %}" class="btn btn-secondary btn-icon" title="Scraper Status">
+                        <i data-lucide="refresh-cw" style="width: 18px; height: 18px;"></i>
+                    </a>
+                </div>
+            </header>
+
+            <section class="content-body fade-in">
+                {% block content %}{% endblock %}
+            </section>
+        </main>
+    </div>
+
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

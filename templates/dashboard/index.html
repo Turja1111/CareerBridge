@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard — CareerBridge{% endblock %}
+
+{% block header_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<!-- KPI Summary Cards -->
+<div class="kpi-grid">
+    <div class="glass-panel kpi-card">
+        <div class="kpi-title">Total Active Jobs</div>
+        <div class="kpi-value">{{ stats.total_jobs }}</div>
+        <div class="kpi-trend" style="color: var(--text-secondary);">
+            <i data-lucide="database" style="width: 14px; height: 14px;"></i> Saved in Local DB
+        </div>
+    </div>
+    
+    <div class="glass-panel kpi-card">
+        <div class="kpi-title">New Jobs Today</div>
+        <div class="kpi-value" style="color: var(--color-new);">+{{ stats.new_today }}</div>
+        <div class="kpi-trend">
+            <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i> In last 24 hours
+        </div>
+    </div>
+
+    <div class="glass-panel kpi-card">
+        <div class="kpi-title">Unique Companies</div>
+        <div class="kpi-value" style="color: var(--color-applied);">{{ stats.total_companies }}</div>
+        <div class="kpi-trend" style="color: var(--text-secondary);">
+            <i data-lucide="building-2" style="width: 14px; height: 14px;"></i> Hiring organizations
+        </div>
+    </div>
+
+    <div class="glass-panel kpi-card">
+        <div class="kpi-title">Top Skill</div>
+        <div class="kpi-value" style="color: var(--color-saved); font-size: 26px; padding-top: 6px; padding-bottom: 6px;">{{ stats.top_skill }}</div>
+        <div class="kpi-trend" style="color: var(--color-saved);">
+            <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i> Most in demand
+        </div>
+    </div>
+
+    <div class="glass-panel kpi-card">
+        <div class="kpi-title">Avg Skills / Job</div>
+        <div class="kpi-value">{{ stats.avg_skills_per_job }}</div>
+        <div class="kpi-trend" style="color: var(--text-secondary);">
+            <i data-lucide="check-square" style="width: 14px; height: 14px;"></i> Keywords parsed
+        </div>
+    </div>
+</div>
+
+<!-- Main Dashboard Content -->
+<div class="dashboard-grid">
+    <!-- Left Column: Recent Jobs -->
+    <div class="glass-panel" style="padding: 24px;">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i data-lucide="clock" style="color: var(--color-brand);"></i> Recent Job Postings
+            </h2>
+            <a href="{% url 'jobs:list' %}" class="btn btn-secondary btn-sm" style="padding: 6px 12px; font-size: 13px;">View All Board</a>
+        </div>
+        
+        <div class="jobs-list">
+            {% for job in recent_jobs %}
+            <div class="job-item">
+                <div class="job-info">
+                    <div class="company-logo">
+                        {% if job.company.logo_url %}
+                            <img src="{{ job.company.logo_url }}" alt="{{ job.company.name }}">
+                        {% else %}
+                            {{ job.company.name|slice:":2"|upper }}
+                        {% endif %}
+                    </div>
+                    <div>
+                        <a href="{% url 'jobs:detail' job.pk %}" class="job-meta-title hover-brand-text">{{ job.title }}</a>
+                        <div class="job-meta-subtitle">
+                            <span>{{ job.company.name }}</span>
+                            <span>📍 {{ job.location }}</span>
+                            <span>📅 {{ job.date_posted|date:"M d, Y" }}</span>
+                        </div>
+                        <div class="job-tags">
+                            <span class="badge badge-worktype">{{ job.work_type }}</span>
+                            {% if job.experience_level %}
+                                <span class="badge badge-exp">{{ job.experience_level }}</span>
+                            {% endif %}
+                            {% if job.salary_display %}
+                                <span class="badge badge-saved" style="background: rgba(245, 158, 11, 0.1);">{{ job.salary_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="job-actions">
+                    <div class="skills-container" style="margin-top: 0; max-width: 250px; justify-content: flex-end;">
+                        {% for skill in job.skills.all|slice:":3" %}
+                            <span class="skill-pill">{{ skill.name }}</span>
+                        {% endfor %}
+                        {% if job.skills.count > 3 %}
+                            <span class="skill-pill">+{{ job.skills.count|add:"-3" }}</span>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'jobs:detail' job.pk %}" class="btn btn-icon" title="View details">
+                        <i data-lucide="arrow-up-right" style="width: 16px; height: 16px;"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <i data-lucide="folder-open" style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.5;"></i>
+                <p>No job postings available. Seed data or start the scraper to load jobs.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Right Column: Quick Stats & Control Panel -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Scraper Status -->
+        <div class="glass-panel" style="padding: 24px;">
+            <div class="card-header" style="margin-bottom: 16px;">
+                <h3 class="card-title">
+                    <i data-lucide="cpu" style="color: var(--color-new);"></i> Scraper Engine
+                </h3>
+            </div>
+            <div style="margin-bottom: 20px; font-size: 14px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Status</span>
+                    <span style="font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                        <span class="status-indicator running" style="background-color: var(--color-new); box-shadow: 0 0 8px var(--color-new);"></span> Active / Idle
+                    </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Last Scraped</span>
+                    <span>
+                        {% if last_scrape %}
+                            {{ last_scrape.created_at|date:"M d, H:i" }}
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </span>
+                </div>
+                {% if last_scrape %}
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Jobs Found</span>
+                    <span class="badge badge-new">{{ last_scrape.jobs_scraped }} posts</span>
+                </div>
+                {% endif %}
+            </div>
+            <a href="{% url 'scraper:status' %}" class="btn btn-primary" style="width: 100%;">
+                <i data-lucide="play-circle"></i> Run & Configure
+            </a>
+        </div>
+
+        <!-- Work Type Chart -->
+        <div class="glass-panel" style="padding: 24px;">
+            <div class="card-header" style="margin-bottom: 16px;">
+                <h3 class="card-title">
+                    <i data-lucide="pie-chart" style="color: var(--color-applied);"></i> Job Types
+                </h3>
+            </div>
+            <div id="workTypeChart" style="min-height: 200px;"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include ApexCharts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Work Type Donut Chart
+        const workTypeData = [
+            {% for item in work_types %}
+                { label: "{{ item.work_type }}", value: {{ item.count }} },
+            {% endfor %}
+        ];
+        
+        if (workTypeData.length > 0) {
+            const options = {
+                chart: {
+                    type: 'donut',
+                    height: 220,
+                    foreColor: '#9ca3af',
+                    background: 'transparent'
+                },
+                series: workTypeData.map(d => d.value),
+                labels: workTypeData.map(d => d.label),
+                colors: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+                stroke: {
+                    show: true,
+                    colors: ['#111827'],
+                    width: 2
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                legend: {
+                    position: 'bottom',
+                    fontSize: '12px',
+                    fontFamily: 'Plus Jakarta Sans',
+                    labels: {
+                        colors: '#f3f4f6'
+                    }
+                },
+                theme: {
+                    mode: 'dark'
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '70%',
+                            background: 'transparent',
+                            labels: {
+                                show: true,
+                                name: {
+                                    show: true,
+                                    fontSize: '14px',
+                                    color: '#9ca3af'
+                                },
+                                value: {
+                                    show: true,
+                                    fontSize: '20px',
+                                    fontWeight: 'bold',
+                                    color: '#f3f4f6',
+                                    formatter: function(val) {
+                                        return val;
+                                    }
+                                },
+                                total: {
+                                    show: true,
+                                    label: 'Jobs',
+                                    color: '#9ca3af',
+                                    formatter: function(w) {
+                                        return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            
+            const chart = new ApexCharts(document.querySelector("#workTypeChart"), options);
+            chart.render();
+        } else {
+            document.querySelector("#workTypeChart").innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 40px 0;">No chart data</div>';
+        }
+    });
+</script>
+{% endblock %}

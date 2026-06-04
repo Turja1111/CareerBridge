@@ -102,27 +102,13 @@ python manage.py runserver
 ### **Pre-authenticating LinkedIn Session (Required once)**
 Since LinkedIn implements strict anti-bot measures (like 2FA and CAPTCHAs), it is best to log in manually once so that Playwright can save your cookies.
 
-Run this simple command in your local python terminal to complete your login session:
+Run the helper script in your local terminal:
 ```bash
-python -c "
-import asyncio
-from playwright.async_api import async_playwright
-
-async def main():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
-        context = await browser.new_context()
-        page = await context.new_page()
-        await page.goto('https://www.linkedin.com/login')
-        input('Log in manually to LinkedIn, handle 2FA/CAPTCHA, then press Enter here...')
-        await context.storage_state(path='linkedin_session/session.json')
-        await browser.close()
-        print('Session saved successfully!')
-
-asyncio.run(main())
-"
+python login.py
 ```
-Once completed, a file named `session.json` will be saved inside the `linkedin_session/` folder. The scraper will use this file to scrape jobs silently without prompting for logins or 2FA again.
+This script will check if Playwright is installed on your host system (installing it if missing), launch a Chromium browser window for you to log in, and save your login session to `linkedin_session/session.json`.
+
+Once completed, the scraper running inside Docker will immediately detect and use this session file (via the volume bind-mount) to scrape jobs silently without needing further logins or prompting for 2FA.
 
 ### **Running a Scrape Manual Trigger**
 1. Access the **Scraper Control Panel** at `http://localhost:8000/scraper/`.

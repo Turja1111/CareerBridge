@@ -52,7 +52,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - .:/app                          # Live reload in dev
-      - playwright_sessions:/app/linkedin_session
+      - ./linkedin_session:/app/linkedin_session
       - static_files:/app/staticfiles
     depends_on:
       db:
@@ -75,7 +75,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - .:/app
-      - playwright_sessions:/app/linkedin_session
+      - ./linkedin_session:/app/linkedin_session
     depends_on:
       db:
         condition: service_healthy
@@ -106,5 +106,4 @@ services:
 volumes:
   postgres_data:       # Persistent DB data across restarts
   redis_data:          # Redis persistence (optional AOF/RDB)
-  playwright_sessions: # LinkedIn browser session cookies
   static_files:        # Django collectstatic output

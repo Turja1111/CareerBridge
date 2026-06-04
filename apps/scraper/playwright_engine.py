@@ -46,8 +46,8 @@ class LinkedInScraper:
         Returns dict with stats: {jobs_found, jobs_new, errors}
         """
         from playwright.async_api import async_playwright
+        from asgiref.sync import sync_to_async
         from . import session_manager
-        from .models import UserPreference
 
         stats = {"jobs_found": 0, "jobs_new": 0, "errors": []}
 
@@ -75,14 +75,15 @@ class LinkedInScraper:
                 # Save session after successful login
                 await session_manager.save_session(self.context)
 
-                # Get user preferences
-                prefs = UserPreference.objects.first()
-                if not prefs or not prefs.keywords:
-                    keywords = ["Python Developer"]
-                    locations = ["Remote"]
-                else:
-                    keywords = prefs.keywords
-                    locations = prefs.locations or [""]
+                # Get user preferences (using sync_to_async to query Django ORM safely)
+                def get_prefs_sync():
+                    from .models import UserPreference
+                    prefs = UserPreference.objects.first()
+                    if not prefs or not prefs.keywords:
+                        return ["Python Developer"], ["Remote"]
+                    return prefs.keywords, (prefs.locations or [""])
+
+                keywords, locations = await sync_to_async(get_prefs_sync)()
 
                 # Scrape for each keyword+location combination
                 for keyword in keywords:
@@ -91,8 +92,8 @@ class LinkedInScraper:
                             jobs = await self.search_jobs(keyword, location)
                             stats["jobs_found"] += len(jobs)
 
-                            # Save to database
-                            new_count = await self._save_jobs(jobs)
+                            # Save to database (using sync_to_async)
+                            new_count = await sync_to_async(self._save_jobs_sync)(jobs)
                             stats["jobs_new"] += new_count
 
                         except Exception as e:
@@ -172,13 +173,19 @@ class LinkedInScraper:
         """Check if the current page indicates a logged-in state."""
         try:
             url = self.page.url
-            # Check if we're on the feed or any authenticated page
+            logger.info(f"Checking login status. Current URL: {url}")
             if "/feed" in url or "/jobs" in url or "/mynetwork" in url:
-                # Also verify there's a nav element
-                nav = await self.page.query_selector('nav, [data-test-global-nav]')
-                return nav is not None
+                logger.info("Login confirmed via authenticated URL.")
+                return True
+            
+            nav = await self.page.query_selector('nav, [data-test-global-nav], .global-nav')
+            if nav is not None:
+                logger.info("Login confirmed via global navigation element.")
+                return True
+                
             return False
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error checking login status: {e}")
             return False
 
     async def search_jobs(self, keyword, location=""):
@@ -318,7 +325,7 @@ class LinkedInScraper:
             logger.warning(f"Error extracting job detail: {e}")
             return None
 
-    async def _save_jobs(self, jobs_data):
+    def _save_jobs_sync(self, jobs_data):
         """Save scraped jobs to the database, deduplicating by linkedin_job_id."""
         from apps.jobs.models import JobPost, Company, Skill, JobSkill
         from .parser import get_skill_category

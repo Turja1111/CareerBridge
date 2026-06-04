@@ -47,7 +47,11 @@ async def load_session(browser):
         return None
 
     try:
-        context = await browser.new_context(storage_state=str(SESSION_FILE))
+        context = await browser.new_context(
+            storage_state=str(SESSION_FILE),
+            viewport={"width": 1280, "height": 800},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        )
         logger.info("Loaded saved session from disk.")
         return context
     except Exception as e:

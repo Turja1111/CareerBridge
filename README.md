@@ -36,24 +36,24 @@ CareerBridge is a self-hosted job intelligence dashboard for tracking LinkedIn j
 
 ```text
 CareerBridge/
-├── apps/
-│   ├── analytics/        # Dashboard metrics and analytics APIs
-│   ├── core/             # Shared base models and utilities
-│   ├── dashboard/        # Main dashboard view
-│   ├── jobs/             # Job, company, skill, and status models/views
-│   └── scraper/          # Playwright scraper, Celery tasks, logs, preferences
-├── careerbridge/
-│   ├── settings/         # base, local, and production settings
-│   ├── celery.py         # Celery app and beat schedule
-│   └── urls.py           # Root routes
-├── linkedin_session/     # Saved Playwright session state
-├── static/               # CSS and JavaScript
-├── templates/            # Django templates
-├── docker-compose.yml
-├── Dockerfile
-├── login.py              # Manual LinkedIn session bootstrap helper
-├── manage.py
-└── requirements.txt
+|-- apps/
+|   |-- analytics/        # Dashboard metrics and analytics APIs
+|   |-- core/             # Shared base models and utilities
+|   |-- dashboard/        # Main dashboard view
+|   |-- jobs/             # Job, company, skill, and status models/views
+|   `-- scraper/          # Playwright scraper, Celery tasks, logs, preferences
+|-- careerbridge/
+|   |-- settings/         # base, local, and production settings
+|   |-- celery.py         # Celery app and beat schedule
+|   `-- urls.py           # Root routes
+|-- linkedin_session/     # Saved Playwright session state
+|-- static/               # CSS and JavaScript
+|-- templates/            # Django templates
+|-- docker-compose.yml
+|-- Dockerfile
+|-- login.py              # Manual LinkedIn session bootstrap helper
+|-- manage.py
+`-- requirements.txt
 ```
 
 ## Getting Started

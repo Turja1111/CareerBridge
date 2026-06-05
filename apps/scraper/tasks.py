@@ -26,13 +26,14 @@ def run_scrape_task(self, triggered_by="schedule"):
     log = ScrapeLog.objects.create(
         status="running",
         triggered_by=triggered_by,
+        progress_message="Queued and starting...",
     )
 
     try:
         logger.info(f"Starting scrape (triggered by: {triggered_by})")
 
         # Run the async scraper in a new event loop
-        scraper = LinkedInScraper()
+        scraper = LinkedInScraper(log_id=log.id)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
@@ -41,13 +42,19 @@ def run_scrape_task(self, triggered_by="schedule"):
             loop.close()
 
         # Update log
-        log.status = "success"
+        log.status = "failed" if stats["errors"] else "success"
         log.jobs_found = stats["jobs_found"]
         log.jobs_new = stats["jobs_new"]
         log.finished_at = timezone.now()
 
         if stats["errors"]:
             log.error_message = "\n".join(stats["errors"])
+            log.progress_message = stats["errors"][-1]
+        else:
+            log.progress_message = (
+                f"Scrape complete: {stats['jobs_found']} found, "
+                f"{stats['jobs_new']} new."
+            )
 
         log.save()
 
@@ -56,9 +63,10 @@ def run_scrape_task(self, triggered_by="schedule"):
             f"{stats['jobs_new']} new, {len(stats['errors'])} errors"
         )
         return {
-            "status": "success",
+            "status": log.status,
             "jobs_found": stats["jobs_found"],
             "jobs_new": stats["jobs_new"],
+            "errors": stats["errors"],
         }
 
     except Exception as e:

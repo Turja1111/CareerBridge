@@ -92,8 +92,14 @@
                             </td>
                             <td style="padding: 12px 8px;">{{ log.jobs_found }} / {{ log.jobs_new }}</td>
                             <td style="padding: 12px 8px;">{{ log.duration|default:"—" }}s</td>
-                            <td style="padding: 12px 8px; color: {% if log.status == 'failed' %}var(--color-ignored){% else %}var(--text-secondary){% endif %}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ log.error_message }}">
-                                {{ log.error_message|default:"Success" }}
+                            <td style="padding: 12px 8px; color: {% if log.status == 'failed' %}var(--color-ignored){% else %}var(--text-secondary){% endif %}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{% if log.status == 'running' %}{{ log.progress_message }}{% else %}{{ log.error_message }}{% endif %}">
+                                {% if log.status == 'running' %}
+                                    {{ log.progress_message|default:"Running..." }}
+                                {% elif log.status == 'failed' %}
+                                    {{ log.error_message|default:"Failed" }}
+                                {% else %}
+                                    Success
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}

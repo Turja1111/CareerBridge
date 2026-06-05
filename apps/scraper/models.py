@@ -55,6 +55,7 @@ class ScrapeLog(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="running")
     jobs_found = models.IntegerField(default=0)
     jobs_new = models.IntegerField(default=0)
+    progress_message = models.TextField(blank=True, null=True)
     error_message = models.TextField(blank=True)
     triggered_by = models.CharField(
         max_length=20, choices=TRIGGER_CHOICES, default="manual"

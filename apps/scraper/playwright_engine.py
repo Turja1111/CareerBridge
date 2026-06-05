@@ -12,6 +12,7 @@ import asyncio
 import logging
 import random
 from datetime import datetime, date
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.utils import timezone
@@ -32,13 +33,41 @@ class LinkedInScraper:
     LINKEDIN_FEED_URL = "https://www.linkedin.com/feed/"
     LINKEDIN_JOBS_URL = "https://www.linkedin.com/jobs/search/"
 
-    def __init__(self):
+    def __init__(self, log_id=None):
         self.headless = settings.SCRAPER_HEADLESS
         self.max_jobs = settings.SCRAPER_MAX_JOBS_PER_SEARCH
         self.delay = settings.SCRAPER_REQUEST_DELAY
         self.browser = None
         self.context = None
         self.page = None
+        self.log_id = log_id
+
+    async def _update_run_log(self, jobs_found=None, jobs_new=None, progress_message=None):
+        if not self.log_id:
+            return
+
+        from asgiref.sync import sync_to_async
+        from .models import ScrapeLog
+
+        def sync_update():
+            log = ScrapeLog.objects.filter(pk=self.log_id).first()
+            if not log:
+                return
+
+            fields = []
+            if jobs_found is not None:
+                log.jobs_found = jobs_found
+                fields.append("jobs_found")
+            if jobs_new is not None:
+                log.jobs_new = jobs_new
+                fields.append("jobs_new")
+            if progress_message is not None:
+                log.progress_message = progress_message
+                fields.append("progress_message")
+            if fields:
+                log.save(update_fields=fields)
+
+        await sync_to_async(sync_update)()
 
     async def run(self):
         """
@@ -67,10 +96,14 @@ class LinkedInScraper:
                 self.page = await self.context.new_page()
 
                 # Login
+                await self._update_run_log(progress_message="Logging into LinkedIn...")
                 logged_in = await self.login()
                 if not logged_in:
                     stats["errors"].append("Failed to log in to LinkedIn")
+                    await self._update_run_log(progress_message="Login failed. Check credentials or 2FA.")
                     return stats
+
+                await self._update_run_log(progress_message="Login successful. Starting job searches...")
 
                 # Save session after successful login
                 await session_manager.save_session(self.context)
@@ -89,17 +122,28 @@ class LinkedInScraper:
                 for keyword in keywords:
                     for location in locations:
                         try:
+                            await self._update_run_log(
+                                progress_message=f"Searching jobs for '{keyword}' in '{location}'...",
+                                jobs_found=stats["jobs_found"],
+                                jobs_new=stats["jobs_new"],
+                            )
                             jobs = await self.search_jobs(keyword, location)
                             stats["jobs_found"] += len(jobs)
 
                             # Save to database (using sync_to_async)
                             new_count = await sync_to_async(self._save_jobs_sync)(jobs)
                             stats["jobs_new"] += new_count
+                            await self._update_run_log(
+                                progress_message=f"Saved {new_count} new jobs for '{keyword}' in '{location}'...",
+                                jobs_found=stats["jobs_found"],
+                                jobs_new=stats["jobs_new"],
+                            )
 
                         except Exception as e:
                             error_msg = f"Error scraping '{keyword}' in '{location}': {e}"
                             logger.error(error_msg)
                             stats["errors"].append(error_msg)
+                            await self._update_run_log(progress_message=error_msg)
 
                         # Rate limiting between searches
                         await asyncio.sleep(random.uniform(2, 4))
@@ -120,16 +164,30 @@ class LinkedInScraper:
         try:
             # Check if already logged in
             await self.page.goto(self.LINKEDIN_FEED_URL, wait_until="domcontentloaded")
-            await self.page.wait_for_timeout(2000)
 
-            if await self.is_logged_in():
+            if await self.wait_for_logged_in(timeout_ms=15000):
                 logger.info("Already logged in via saved session.")
                 return True
 
             # Navigate to login page
             logger.info("Session expired. Logging in with credentials...")
-            await self.page.goto(self.LINKEDIN_LOGIN_URL, wait_until="domcontentloaded")
-            await self.page.wait_for_timeout(1000)
+            if "/login" not in self.page.url:
+                await self.page.goto(self.LINKEDIN_LOGIN_URL, wait_until="domcontentloaded")
+
+            # LinkedIn sometimes restores the saved session after briefly showing
+            # the login redirect URL. Give that redirect a chance before filling
+            # credentials, otherwise Playwright can wait for a vanished form.
+            if await self.wait_for_logged_in(timeout_ms=5000):
+                logger.info("Login completed via delayed session redirect.")
+                return True
+
+            try:
+                await self.page.wait_for_selector("#username", timeout=15000)
+            except Exception:
+                if await self.wait_for_logged_in(timeout_ms=5000):
+                    logger.info("Login completed before credentials were needed.")
+                    return True
+                raise
 
             # Fill credentials
             email = settings.LINKEDIN_EMAIL
@@ -144,10 +202,7 @@ class LinkedInScraper:
             await self.page.click('button[type="submit"]')
 
             # Wait for redirect
-            await self.page.wait_for_timeout(3000)
-
-            # Check for 2FA / CAPTCHA
-            if await self.is_logged_in():
+            if await self.wait_for_logged_in(timeout_ms=15000):
                 logger.info("Login successful!")
                 return True
 
@@ -168,6 +223,15 @@ class LinkedInScraper:
         except Exception as e:
             logger.error(f"Login error: {e}")
             return False
+
+    async def wait_for_logged_in(self, timeout_ms=10000):
+        """Poll for LinkedIn's authenticated UI/URL while redirects settle."""
+        deadline = asyncio.get_running_loop().time() + (timeout_ms / 1000)
+        while asyncio.get_running_loop().time() < deadline:
+            if await self.is_logged_in():
+                return True
+            await self.page.wait_for_timeout(500)
+        return await self.is_logged_in()
 
     async def is_logged_in(self):
         """Check if the current page indicates a logged-in state."""
@@ -200,7 +264,7 @@ class LinkedInScraper:
             "f_TPR": "r86400",  # Last 24 hours
             "sortBy": "DD",  # Newest first
         }
-        query_string = "&".join(f"{k}={v}" for k, v in params.items() if v)
+        query_string = urlencode({k: v for k, v in params.items() if v})
         search_url = f"{self.LINKEDIN_JOBS_URL}?{query_string}"
 
         logger.info(f"Searching: {keyword} in {location}")

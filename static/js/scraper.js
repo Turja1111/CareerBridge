@@ -53,7 +53,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
 
                     let foundText = data.current_run?.jobs_found !== undefined ? ` (${data.current_run.jobs_found} found so far)` : "";
-                    statusMsg.innerText = `Background task active${foundText}. Polling for completion...`;
+                    let progressText = data.current_run?.progress_message ? ` ${data.current_run.progress_message}` : "";
+                    statusMsg.innerText = `Background task active${foundText}.${progressText} Polling for completion...`;
                     
                     // Keep polling
                     if (!pollingInterval) {

@@ -47,6 +47,8 @@ def scraper_status_api(request):
             "id": running.id,
             "started_at": running.started_at.isoformat(),
             "jobs_found": running.jobs_found,
+            "jobs_new": running.jobs_new,
+            "progress_message": running.progress_message,
         }
 
     if last_success:
@@ -74,6 +76,7 @@ def scraper_logs(request):
             "jobs_found": log.jobs_found,
             "jobs_new": log.jobs_new,
             "triggered_by": log.triggered_by,
+            "progress_message": log.progress_message,
             "error_message": log.error_message,
             "duration": log.duration,
         }

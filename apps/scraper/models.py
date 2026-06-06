@@ -96,7 +96,12 @@ class UserPreference(TimeStampedModel):
         blank=True,
         help_text='Work type filters, e.g. ["Remote", "Hybrid"]',
     )
-    experience_level = models.CharField(max_length=50, blank=True)
+    experience_level = ArrayField(
+        models.CharField(max_length=50),
+        default=list,
+        blank=True,
+        help_text='Experience filters, e.g. ["Entry", "Mid", "Internship"]',
+    )
 
     class Meta:
         verbose_name = "User Preference"

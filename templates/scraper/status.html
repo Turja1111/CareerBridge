@@ -127,27 +127,27 @@
             {% csrf_token %}
             <div>
                 <label for="pref-keywords" style="display: block; font-weight: 600; margin-bottom: 6px;">Job Keywords</label>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Comma-separated search keywords (e.g. Python Developer, Django)</div>
-                <input type="text" id="pref-keywords" class="form-select" style="width: 100%;" value="{% for kw in preferences.keywords %}{{ kw }}{% if not forloop.last %}, {% endif %}{% empty %}Python Developer{% endfor %}">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Comma-separated search keywords (jobs and internships are searched)</div>
+                <input type="text" id="pref-keywords" class="form-select" style="width: 100%;" value="{% for kw in preferences.keywords %}{{ kw }}{% if not forloop.last %}, {% endif %}{% empty %}Data Science, Machine Learning, Data Analyst, Python Developer{% endfor %}">
             </div>
 
             <div>
                 <label for="pref-locations" style="display: block; font-weight: 600; margin-bottom: 6px;">Locations</label>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Comma-separated locations (e.g. Bangladesh, Remote)</div>
-                <input type="text" id="pref-locations" class="form-select" style="width: 100%;" value="{% for loc in preferences.locations %}{{ loc }}{% if not forloop.last %}, {% endif %}{% empty %}Bangladesh, Remote{% endfor %}">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Comma-separated Bangladesh locations. Remote searches stay Bangladesh-only.</div>
+                <input type="text" id="pref-locations" class="form-select" style="width: 100%;" value="{% for loc in preferences.locations %}{{ loc }}{% if not forloop.last %}, {% endif %}{% empty %}Bangladesh, Dhaka{% endfor %}">
             </div>
 
             <div>
                 <label style="display: block; font-weight: 600; margin-bottom: 8px;">Work Types</label>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" name="work_types" value="Remote" {% if 'Remote' in preferences.work_types or not preferences %}checked{% endif %}> Remote
+                        <input type="checkbox" name="work_types" value="Remote" {% if 'Remote' in preferences.work_types or not preferences or not preferences.work_types %}checked{% endif %}> Remote
                     </label>
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" name="work_types" value="Hybrid" {% if 'Hybrid' in preferences.work_types or not preferences %}checked{% endif %}> Hybrid
+                        <input type="checkbox" name="work_types" value="Hybrid" {% if 'Hybrid' in preferences.work_types or not preferences or not preferences.work_types %}checked{% endif %}> Hybrid
                     </label>
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" name="work_types" value="On-site" {% if 'On-site' in preferences.work_types or not preferences %}checked{% endif %}> On-site
+                        <input type="checkbox" name="work_types" value="On-site" {% if 'On-site' in preferences.work_types or not preferences or not preferences.work_types %}checked{% endif %}> On-site
                     </label>
                 </div>
             </div>
@@ -156,7 +156,10 @@
                 <label style="display: block; font-weight: 600; margin-bottom: 8px;">Experience Levels</label>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" name="experience_level" value="Entry" {% if 'Entry' in preferences.experience_level or not preferences %}checked{% endif %}> Entry Level
+                        <input type="checkbox" name="experience_level" value="Internship" {% if 'Internship' in preferences.experience_level or not preferences or not preferences.experience_level %}checked{% endif %}> Internship
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="experience_level" value="Entry" {% if 'Entry' in preferences.experience_level or not preferences or not preferences.experience_level %}checked{% endif %}> Entry Level
                     </label>
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" name="experience_level" value="Mid" {% if 'Mid' in preferences.experience_level or not preferences %}checked{% endif %}> Mid Level

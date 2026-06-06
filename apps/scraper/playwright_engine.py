@@ -32,6 +32,38 @@ class LinkedInScraper:
     LINKEDIN_LOGIN_URL = "https://www.linkedin.com/login"
     LINKEDIN_FEED_URL = "https://www.linkedin.com/feed/"
     LINKEDIN_JOBS_URL = "https://www.linkedin.com/jobs/search/"
+    DEFAULT_KEYWORDS = [
+        "Data Science",
+        "Machine Learning",
+        "Data Analyst",
+        "Python Developer",
+    ]
+    DEFAULT_LOCATIONS = ["Bangladesh", "Dhaka"]
+    BANGLADESH_LOCATION_TERMS = (
+        "bangladesh",
+        "dhaka",
+        "chattogram",
+        "chittagong",
+        "sylhet",
+        "khulna",
+        "rajshahi",
+        "barisal",
+        "rangpur",
+        "mymensingh",
+    )
+    WORK_TYPE_FILTERS = {
+        "On-site": "1",
+        "Remote": "2",
+        "Hybrid": "3",
+    }
+    EXPERIENCE_FILTERS = {
+        "Internship": "1",
+        "Entry": "2",
+        "Mid": "3",
+        "Senior": "4",
+        "Lead": "5",
+        "Director": "6",
+    }
 
     def __init__(self, log_id=None):
         self.headless = settings.SCRAPER_HEADLESS
@@ -112,41 +144,60 @@ class LinkedInScraper:
                 def get_prefs_sync():
                     from .models import UserPreference
                     prefs = UserPreference.objects.first()
-                    if not prefs or not prefs.keywords:
-                        return ["Python Developer"], ["Remote"]
-                    return prefs.keywords, (prefs.locations or [""])
+                    if not prefs:
+                        return {
+                            "keywords": self.DEFAULT_KEYWORDS,
+                            "locations": self.DEFAULT_LOCATIONS,
+                            "work_types": ["Remote", "Hybrid", "On-site"],
+                            "experience_levels": ["Entry", "Internship"],
+                        }
 
-                keywords, locations = await sync_to_async(get_prefs_sync)()
+                    return {
+                        "keywords": prefs.keywords or self.DEFAULT_KEYWORDS,
+                        "locations": prefs.locations or self.DEFAULT_LOCATIONS,
+                        "work_types": prefs.work_types or ["Remote", "Hybrid", "On-site"],
+                        "experience_levels": prefs.experience_level or ["Entry", "Internship"],
+                    }
 
-                # Scrape for each keyword+location combination
-                for keyword in keywords:
-                    for location in locations:
-                        try:
-                            await self._update_run_log(
-                                progress_message=f"Searching jobs for '{keyword}' in '{location}'...",
-                                jobs_found=stats["jobs_found"],
-                                jobs_new=stats["jobs_new"],
-                            )
-                            jobs = await self.search_jobs(keyword, location)
-                            stats["jobs_found"] += len(jobs)
+                prefs = await sync_to_async(get_prefs_sync)()
+                search_plan = self.build_search_plan(prefs)
 
-                            # Save to database (using sync_to_async)
-                            new_count = await sync_to_async(self._save_jobs_sync)(jobs)
-                            stats["jobs_new"] += new_count
-                            await self._update_run_log(
-                                progress_message=f"Saved {new_count} new jobs for '{keyword}' in '{location}'...",
-                                jobs_found=stats["jobs_found"],
-                                jobs_new=stats["jobs_new"],
-                            )
+                # Scrape each preference-aware LinkedIn search.
+                for search in search_plan:
+                    try:
+                        keyword = search["keyword"]
+                        location = search["location"]
+                        work_type = search.get("work_type", "")
+                        await self._update_run_log(
+                            progress_message=f"Searching {work_type or 'all'} roles for '{keyword}' in '{location}'...",
+                            jobs_found=stats["jobs_found"],
+                            jobs_new=stats["jobs_new"],
+                        )
+                        jobs = await self.search_jobs(
+                            keyword,
+                            location,
+                            work_type=work_type,
+                            experience_levels=search.get("experience_levels"),
+                        )
+                        stats["jobs_found"] += len(jobs)
 
-                        except Exception as e:
-                            error_msg = f"Error scraping '{keyword}' in '{location}': {e}"
-                            logger.error(error_msg)
-                            stats["errors"].append(error_msg)
-                            await self._update_run_log(progress_message=error_msg)
+                        # Save to database (using sync_to_async)
+                        new_count = await sync_to_async(self._save_jobs_sync)(jobs)
+                        stats["jobs_new"] += new_count
+                        await self._update_run_log(
+                            progress_message=f"Saved {new_count} new Bangladesh roles for '{keyword}' in '{location}'...",
+                            jobs_found=stats["jobs_found"],
+                            jobs_new=stats["jobs_new"],
+                        )
 
-                        # Rate limiting between searches
-                        await asyncio.sleep(random.uniform(2, 4))
+                    except Exception as e:
+                        error_msg = f"Error scraping '{search['keyword']}' in '{search['location']}': {e}"
+                        logger.error(error_msg)
+                        stats["errors"].append(error_msg)
+                        await self._update_run_log(progress_message=error_msg)
+
+                    # Rate limiting between searches
+                    await asyncio.sleep(random.uniform(2, 4))
 
                 await self.browser.close()
 
@@ -155,6 +206,104 @@ class LinkedInScraper:
             stats["errors"].append(str(e))
 
         return stats
+
+    def build_search_plan(self, prefs):
+        """Build Bangladesh-focused job and internship searches from UI prefs."""
+        keywords = self._normalize_keywords(prefs.get("keywords") or [])
+        locations = self._normalize_locations(prefs.get("locations") or [])
+        work_types = prefs.get("work_types") or ["Remote", "Hybrid", "On-site"]
+        experience_levels = self._normalize_experience_levels(
+            prefs.get("experience_levels") or []
+        )
+
+        plan = []
+        seen = set()
+        for keyword in keywords:
+            for location in locations:
+                for work_type in work_types:
+                    # Never search worldwide remote jobs. Keep remote searches
+                    # anchored to Bangladesh so results stay locally relevant.
+                    search_location = "Bangladesh" if work_type == "Remote" else location
+                    item = {
+                        "keyword": keyword,
+                        "location": search_location,
+                        "work_type": work_type,
+                        "experience_levels": experience_levels,
+                    }
+                    key = (
+                        item["keyword"].lower(),
+                        item["location"].lower(),
+                        item["work_type"],
+                        tuple(item["experience_levels"]),
+                    )
+                    if key not in seen:
+                        seen.add(key)
+                        plan.append(item)
+
+        logger.info("Built %s Bangladesh-focused search combinations.", len(plan))
+        return plan
+
+    def _normalize_keywords(self, keywords):
+        cleaned = []
+        for keyword in keywords:
+            keyword = str(keyword).strip()
+            if keyword:
+                cleaned.append(keyword)
+
+        # If the UI still has the original placeholder/default value, broaden it
+        # to match the user's profile direction instead of scraping only Python.
+        if not cleaned or cleaned == ["Python Developer"]:
+            cleaned = self.DEFAULT_KEYWORDS.copy()
+
+        expanded = []
+        for keyword in cleaned:
+            self._append_unique(expanded, keyword)
+            lower_keyword = keyword.lower()
+            if "intern" not in lower_keyword and "internship" not in lower_keyword:
+                self._append_unique(expanded, f"{keyword} Internship")
+                if "developer" in lower_keyword:
+                    self._append_unique(expanded, keyword.replace("Developer", "Intern"))
+
+        return expanded
+
+    def _normalize_locations(self, locations):
+        normalized = []
+        for location in locations:
+            location = str(location).strip()
+            if not location:
+                continue
+            if location.lower() == "remote":
+                self._append_unique(normalized, "Bangladesh")
+                continue
+            if location.lower() == "dhaka":
+                location = "Dhaka, Bangladesh"
+            self._append_unique(normalized, location)
+
+        self._append_unique(normalized, "Bangladesh")
+        self._append_unique(normalized, "Dhaka, Bangladesh")
+        return normalized
+
+    def _normalize_experience_levels(self, experience_levels):
+        normalized = []
+        if isinstance(experience_levels, str):
+            experience_levels = [experience_levels]
+
+        for level in experience_levels:
+            level = str(level).strip()
+            if level:
+                self._append_unique(normalized, level)
+
+        if not normalized:
+            normalized = ["Internship", "Entry"]
+
+        # Entry-level preferences should include internships too.
+        if "Entry" in normalized:
+            self._append_unique(normalized, "Internship")
+        return normalized
+
+    def _append_unique(self, values, value):
+        if value and value not in values:
+            values.append(value)
 
     async def login(self):
         """
@@ -252,7 +401,7 @@ class LinkedInScraper:
             logger.warning(f"Error checking login status: {e}")
             return False
 
-    async def search_jobs(self, keyword, location=""):
+    async def search_jobs(self, keyword, location="", work_type="", experience_levels=None):
         """
         Search LinkedIn Jobs with given keyword and location.
         Returns list of raw job data dicts.
@@ -264,10 +413,21 @@ class LinkedInScraper:
             "f_TPR": "r86400",  # Last 24 hours
             "sortBy": "DD",  # Newest first
         }
+        if work_type in self.WORK_TYPE_FILTERS:
+            params["f_WT"] = self.WORK_TYPE_FILTERS[work_type]
+
+        experience_filters = [
+            self.EXPERIENCE_FILTERS[level]
+            for level in (experience_levels or [])
+            if level in self.EXPERIENCE_FILTERS
+        ]
+        if experience_filters:
+            params["f_E"] = ",".join(dict.fromkeys(experience_filters))
+
         query_string = urlencode({k: v for k, v in params.items() if v})
         search_url = f"{self.LINKEDIN_JOBS_URL}?{query_string}"
 
-        logger.info(f"Searching: {keyword} in {location}")
+        logger.info(f"Searching: {keyword} in {location} ({work_type or 'all work types'})")
         await self.page.goto(search_url, wait_until="domcontentloaded")
         await self.page.wait_for_timeout(2000)
 
@@ -286,7 +446,14 @@ class LinkedInScraper:
             try:
                 job_data = await self.extract_job_detail(card)
                 if job_data:
-                    jobs.append(job_data)
+                    if self._is_bangladesh_job(job_data):
+                        jobs.append(job_data)
+                    else:
+                        logger.info(
+                            "Skipping non-Bangladesh result: %s | %s",
+                            job_data.get("title", ""),
+                            job_data.get("location", ""),
+                        )
             except Exception as e:
                 logger.warning(f"Failed to extract job card {i}: {e}")
 
@@ -295,6 +462,11 @@ class LinkedInScraper:
 
         logger.info(f"Found {len(jobs)} jobs for '{keyword}' in '{location}'")
         return jobs
+
+    def _is_bangladesh_job(self, job_data):
+        """Only save jobs whose visible LinkedIn location is Bangladesh-based."""
+        location = (job_data.get("location") or "").lower()
+        return any(term in location for term in self.BANGLADESH_LOCATION_TERMS)
 
     async def extract_job_detail(self, card):
         """

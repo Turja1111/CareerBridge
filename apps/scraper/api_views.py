@@ -10,6 +10,15 @@ from django.utils import timezone
 from .models import ScrapeLog, UserPreference
 
 
+def _as_clean_list(value):
+    """Normalize preference API values to a clean list of strings."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        value = value.split(",")
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
 @api_view(["POST"])
 def trigger_scrape(request):
     """Manually trigger a scrape task."""
@@ -99,9 +108,13 @@ def preferences_api(request):
         })
 
     # POST — update preferences
-    prefs.keywords = request.data.get("keywords", prefs.keywords)
-    prefs.locations = request.data.get("locations", prefs.locations)
-    prefs.work_types = request.data.get("work_types", prefs.work_types)
-    prefs.experience_level = request.data.get("experience_level", prefs.experience_level)
+    if "keywords" in request.data:
+        prefs.keywords = _as_clean_list(request.data.get("keywords"))
+    if "locations" in request.data:
+        prefs.locations = _as_clean_list(request.data.get("locations"))
+    if "work_types" in request.data:
+        prefs.work_types = _as_clean_list(request.data.get("work_types"))
+    if "experience_level" in request.data:
+        prefs.experience_level = _as_clean_list(request.data.get("experience_level"))
     prefs.save()
     return Response({"message": "Preferences updated"})

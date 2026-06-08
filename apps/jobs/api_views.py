@@ -11,6 +11,7 @@ from datetime import timedelta
 from .models import JobPost
 from .serializers import JobPostListSerializer, JobPostDetailSerializer, JobStatusUpdateSerializer
 from .filters import JobPostFilter
+from .utils import is_relevant_job
 
 
 class JobPostViewSet(viewsets.ReadOnlyModelViewSet):
@@ -18,6 +19,7 @@ class JobPostViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = (
         JobPost.objects.filter(is_active=True)
+        .exclude(status="ignored")
         .select_related("company")
         .prefetch_related("skills")
     )
@@ -25,6 +27,10 @@ class JobPostViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ["title", "company__name", "location", "description"]
     ordering_fields = ["scraped_at", "date_posted", "title"]
     ordering = ["-scraped_at"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return [job for job in queryset if is_relevant_job(job)]
 
     def get_serializer_class(self):
         if self.action == "retrieve":

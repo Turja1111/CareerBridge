@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Ignored Jobs — CareerBridge{% endblock %}
+{% block header_title %}Manage Ignored Jobs{% endblock %}
+
+{% block content %}
+<div class="glass-panel" style="padding: 24px;">
+    <h2 style="font-size: 20px; margin-bottom: 8px;">Restored ignored opportunities</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 18px;">Use this page to restore jobs you previously ignored from the dashboard.</p>
+
+    {% if restored %}
+    <div class="badge badge-saved" style="margin-bottom: 16px;">A job was restored to the dashboard.</div>
+    {% endif %}
+
+    {% if ignored_jobs %}
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+        {% for job in ignored_jobs %}
+        <div class="glass-panel" style="padding: 16px; border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <h3 style="font-size: 16px; margin-bottom: 4px;">{{ job.title }}</h3>
+                    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 0;">{{ job.company.name }} • {{ job.location }}</p>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="job_id" value="{{ job.pk }}">
+                    <button type="submit" class="btn btn-primary">Restore</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="glass-panel" style="padding: 28px; text-align: center; color: var(--text-secondary);">No ignored jobs to restore right now.</div>
+    {% endif %}
+</div>
+{% endblock %}

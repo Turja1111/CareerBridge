@@ -6,7 +6,8 @@ from django.shortcuts import render
 from django.utils import timezone
 from datetime import timedelta
 
-from apps.jobs.models import JobPost, Company, Skill
+from apps.jobs.models import JobPost
+from apps.jobs.utils import is_relevant_job
 from apps.scraper.models import ScrapeLog
 from apps.analytics.aggregators import summary_stats, top_skills, work_type_distribution
 
@@ -16,11 +17,13 @@ def index(request):
     stats = summary_stats()
 
     # Recent jobs
-    recent_jobs = (
-        JobPost.objects.filter(is_active=True)
+    recent_jobs = [
+        job for job in JobPost.objects.filter(is_active=True)
+        .exclude(status="ignored")
         .select_related("company")
-        .prefetch_related("skills")[:6]
-    )
+        .prefetch_related("skills")
+        if is_relevant_job(job)
+    ][:6]
 
     # Last scrape info
     last_scrape = ScrapeLog.objects.first()

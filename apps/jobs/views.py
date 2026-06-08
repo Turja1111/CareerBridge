@@ -11,11 +11,21 @@ from django.utils import timezone
 from datetime import timedelta
 
 from .models import JobPost, Company, Skill
+from .utils import is_relevant_job, relevance_score
+
+
+def _relevant_jobs_queryset():
+    return (
+        JobPost.objects.filter(is_active=True)
+        .exclude(status="ignored")
+        .select_related("company")
+        .prefetch_related("skills")
+    )
 
 
 def job_list(request):
-    """Main job board page with filters, search, and pagination."""
-    queryset = JobPost.objects.filter(is_active=True).select_related("company").prefetch_related("skills")
+    """Main job board page with Bangladesh-safe, high-quality recommendations."""
+    queryset = _relevant_jobs_queryset()
 
     # --- Search ---
     search_query = request.GET.get("search", "").strip()
@@ -56,8 +66,18 @@ def job_list(request):
     # --- Distinct (needed after M2M filter) ---
     queryset = queryset.distinct()
 
+    jobs = [job for job in queryset if is_relevant_job(job)]
+    jobs = sorted(
+        jobs,
+        key=lambda job: (
+            relevance_score(job.title, job.description, job.location, " ".join(skill.name for skill in job.skills.all())),
+            job.scraped_at,
+        ),
+        reverse=True,
+    )
+
     # --- Pagination ---
-    paginator = Paginator(queryset, 12)
+    paginator = Paginator(jobs, 12)
     page_number = request.GET.get("page", 1)
     page_obj = paginator.get_page(page_number)
 
@@ -74,11 +94,8 @@ def job_list(request):
     )
 
     # --- Counts ---
-    total_jobs = JobPost.objects.filter(is_active=True).count()
-    new_today = JobPost.objects.filter(
-        is_active=True,
-        scraped_at__gte=timezone.now() - timedelta(hours=24),
-    ).count()
+    total_jobs = len(jobs)
+    new_today = sum(1 for job in jobs if job.scraped_at >= timezone.now() - timedelta(hours=24))
 
     # --- Status counts ---
     saved_count = JobPost.objects.filter(status="saved", is_active=True).count()
@@ -105,12 +122,32 @@ def job_list(request):
     return render(request, "jobs/list.html", context)
 
 
+def manage_ignored_jobs(request):
+    """Restore ignored jobs manually from a dedicated management page."""
+    ignored_jobs = (
+        JobPost.objects.filter(status="ignored", is_active=True)
+        .select_related("company")
+        .prefetch_related("skills")
+        .order_by("-updated_at")
+    )
+
+    if request.method == "POST":
+        job_id = request.POST.get("job_id")
+        if job_id:
+            JobPost.objects.filter(pk=job_id, status="ignored").update(status="new")
+        return render(request, "jobs/ignored_jobs.html", {"ignored_jobs": ignored_jobs, "restored": True})
+
+    return render(request, "jobs/ignored_jobs.html", {"ignored_jobs": ignored_jobs, "restored": False})
+
+
 def job_detail(request, pk):
     """Single job post detail page."""
     job = get_object_or_404(
         JobPost.objects.select_related("company").prefetch_related("skills"),
         pk=pk,
     )
+    if job.status == "ignored" or not is_relevant_job(job):
+        raise get_object_or_404(JobPost, pk=pk)
     # Get similar jobs (same company or same skills)
     similar_jobs = (
         JobPost.objects.filter(is_active=True)

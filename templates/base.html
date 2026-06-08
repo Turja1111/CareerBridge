@@ -41,6 +41,12 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{% url 'jobs:ignored' %}" class="sidebar-link {% if request.resolver_match.url_name == 'ignored' %}active{% endif %}">
+                        <i data-lucide="eye-off"></i>
+                        <span>Manage Ignored Jobs</span>
+                    </a>
+                </li>
+                <li>
                     <a href="{% url 'scraper:status' %}" class="sidebar-link {% if request.resolver_match.app_name == 'scraper' %}active{% endif %}">
                         <i data-lucide="terminal"></i>
                         <span>Scraper Control</span>

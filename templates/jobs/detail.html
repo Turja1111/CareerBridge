@@ -82,7 +82,24 @@
             <!-- Job Description Body -->
             <div style="margin-bottom: 30px;">
                 <h3 style="font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">About the Job</h3>
-                <div class="detail-body-content">{{ job.description }}</div>
+                {% if job.bullet_sections %}
+                    {% for section_title, bullets in job.bullet_sections %}
+                        <h4 style="font-size: 14px; margin: 10px 0 6px;">{{ section_title }}</h4>
+                        <ul style="margin: 0 0 12px 18px; color: var(--text-primary); line-height: 1.6;">
+                            {% for b in bullets %}
+                                <li style="margin-bottom: 8px;">{{ b }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endfor %}
+                {% else %}
+                    <ul style="margin: 0; padding-left: 18px; color: var(--text-primary); line-height: 1.6;">
+                        {% for bullet in job.bullet_lines %}
+                        <li style="margin-bottom: 8px;">{{ bullet }}</li>
+                        {% empty %}
+                        <li>No detail text available for this posting.</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
             </div>
 
             <!-- Apply CTA Button -->

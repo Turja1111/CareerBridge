@@ -2,6 +2,8 @@
 Jobs — Models for Companies, Skills, Job Posts, and User Status.
 """
 
+import re
+
 from django.db import models
 from apps.core.models import TimeStampedModel
 
@@ -127,6 +129,105 @@ class JobPost(TimeStampedModel):
             return f"From {currency}{self.salary_min:,}"
         return ""
 
+    @property
+    def bullet_lines(self):
+        """Return job description as readable bullet points for the UI."""
+        text = self.description or ""
+        lines = []
+        for raw in text.splitlines():
+            cleaned = re.sub(r"^\s*[-*•]\s*", "", raw).strip()
+            if cleaned:
+                lines.append(cleaned)
+
+        if lines:
+            return lines
+
+        fallback = re.split(r"(?<=[.;])\s+", text)
+        return [item.strip(" •-") for item in fallback if item.strip()]
+
+    @property
+    def bullet_sections(self):
+        """Parse `description` into titled sections with concise bullet points.
+
+        Returns a list of (title, [bullets]) preserving order. Headings detected
+        include common labels like 'Responsibilities', 'Qualifications',
+        'Educational Requirements', 'Additional Requirements', and 'Preferred Skills'.
+        Falls back to a single 'Overview' section.
+        """
+        text = (self.description or "").strip()
+        if not text:
+            return []
+
+        # Normalize bullets and separators
+        norm = text.replace('\r', '\n')
+        norm = norm.replace('•', '\n•')
+        # Split into raw lines
+        raw_lines = [ln.strip() for ln in norm.splitlines() if ln.strip()]
+
+        # Heading detection regex (case-insensitive)
+        heading_re = re.compile(
+            r'^(?P<h>about the job|job description|job responsibilities|role responsibilities|responsibilities|qualifications|educational requirements|additional requirements|preferred skills|requirements|skills):?$',
+            re.IGNORECASE,
+        )
+
+        sections = []
+        current_title = 'Overview'
+        current_buf = []
+
+        def flush_section():
+            nonlocal current_title, current_buf
+            if not current_buf:
+                return
+            # Convert buffer text to bullets by splitting sentences and semicolons
+            bullets = []
+            for item in current_buf:
+                # If item starts with a bullet marker, strip it
+                cleaned = re.sub(r'^[-*•]\s*', '', item).strip()
+                # Split by semicolon or sentence boundary
+                parts = re.split(r'[;\u2022]|(?<=[.?!])\s+', cleaned)
+                for p in parts:
+                    s = p.strip(' •-:')
+                    if not s:
+                        continue
+                    # Shorten extremely long sentences by breaking on commas
+                    if len(s) > 140 and ',' in s:
+                        subparts = [sp.strip() for sp in s.split(',') if sp.strip()]
+                        for sp in subparts:
+                            if sp and len(sp) <= 140:
+                                bullets.append(sp)
+                    else:
+                        bullets.append(s)
+
+            if bullets:
+                sections.append((current_title, bullets))
+            current_buf = []
+
+        for line in raw_lines:
+            m = heading_re.match(line)
+            if m:
+                # Flush previous
+                flush_section()
+                current_title = m.group('h').title()
+                continue
+            # If line looks like a short heading (ends with ':'), treat as heading
+            if line.endswith(':') and len(line) < 60:
+                flush_section()
+                current_title = line.rstrip(':').title()
+                continue
+            current_buf.append(line)
+
+        # Final flush
+        flush_section()
+
+        # If everything ended up in 'Overview' and the single section has long paragraphs,
+        # split into shorter bullets by sentences
+        if len(sections) == 1 and sections[0][0] == 'Overview':
+            title, bullets = sections[0]
+            if len(bullets) == 1 and len(bullets[0]) > 180:
+                parts = re.split(r'(?<=[.;])\s+', bullets[0])
+                sections[0] = (title, [p.strip(' •-') for p in parts if p.strip()])
+
+        return sections
     @property
     def is_new(self):
         """Check if job was posted in the last 24 hours."""

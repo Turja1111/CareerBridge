@@ -4,7 +4,7 @@ import re
 from typing import Iterable
 
 BANGLADESH_TERMS = (
-    "bangladesh", "dhaka", "chattogram", "chittagong", "khulna", "rajshahi",
+    "bangladesh", "dhaka", "mymensingh", "chattogram", "chittagong", "khulna", "rajshahi",
     "rangpur", "sylhet", "barisal", "cumilla", "gazipur", "narayanganj", "bogura",
 )
 

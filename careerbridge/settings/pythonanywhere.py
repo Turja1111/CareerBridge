@@ -1,26 +1,35 @@
 """
-CareerBridge — Base Settings
-Common settings shared across all environments.
+CareerBridge — PythonAnywhere Settings
+
+Use this settings module when deploying on PythonAnywhere.
+Usage: Set DJANGO_SETTINGS_MODULE=careerbridge.settings.pythonanywhere
 """
 
 import os
 from pathlib import Path
-from decouple import config, Csv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-production")
+# ─────────────────────────────────────────────
+#  SECURITY
+# ─────────────────────────────────────────────
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config("DEBUG", default=True, cast=bool)
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "django-insecure-CHANGE-ME-in-production-x9k2m3n4p5q6r7s8t0u",
+)
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+DEBUG = False
+
+ALLOWED_HOSTS = [
+    "turja221b.pythonanywhere.com",
+    "localhost",
+    "127.0.0.1",
+]
 
 
 # ─────────────────────────────────────────────
-#  Application Definition
+#  APPLICATION DEFINITION
 # ─────────────────────────────────────────────
 
 INSTALLED_APPS = [
@@ -33,7 +42,6 @@ INSTALLED_APPS = [
     # Third party
     "rest_framework",
     "django_filters",
-    "django_celery_beat",
     # Local apps
     "apps.core",
     "apps.jobs",
@@ -75,23 +83,21 @@ WSGI_APPLICATION = "careerbridge.wsgi.application"
 
 
 # ─────────────────────────────────────────────
-#  Database — PostgreSQL
+#  DATABASE — SQLite (PythonAnywhere free tier)
 # ─────────────────────────────────────────────
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="linkedin_job_alert"),
-        "USER": config("DB_USER", default="postgres"),
-        "PASSWORD": config("DB_PASSWORD", default="Admin"),
-        "HOST": config("DB_HOST", default="localhost"),
-        "PORT": config("DB_PORT", default="5432"),
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 
 # ─────────────────────────────────────────────
-#  Password Validation
+#  PASSWORD VALIDATION
 # ─────────────────────────────────────────────
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -103,7 +109,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # ─────────────────────────────────────────────
-#  Internationalization
+#  INTERNATIONALIZATION
 # ─────────────────────────────────────────────
 
 LANGUAGE_CODE = "en-us"
@@ -113,12 +119,12 @@ USE_TZ = True
 
 
 # ─────────────────────────────────────────────
-#  Static Files
+#  STATIC FILES
 # ─────────────────────────────────────────────
 
-STATIC_URL = "static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -127,22 +133,7 @@ STORAGES = {
 
 
 # ─────────────────────────────────────────────
-#  Media Files
-# ─────────────────────────────────────────────
-
-MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
-
-
-# ─────────────────────────────────────────────
-#  Default Primary Key
-# ─────────────────────────────────────────────
-
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-
-# ─────────────────────────────────────────────
-#  Django REST Framework
+#  REST FRAMEWORK
 # ─────────────────────────────────────────────
 
 REST_FRAMEWORK = {
@@ -157,38 +148,34 @@ REST_FRAMEWORK = {
 
 
 # ─────────────────────────────────────────────
-#  Celery Configuration
+#  SCRAPER SETTINGS
 # ─────────────────────────────────────────────
 
-CELERY_BROKER_URL = config("REDIS_URL", default="redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://localhost:6379/0")
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = TIME_ZONE
-
-
-# ─────────────────────────────────────────────
-#  Scraper Settings
-# ─────────────────────────────────────────────
-
-SCRAPER_MAX_JOBS_PER_SEARCH = config("SCRAPER_MAX_JOBS_PER_SEARCH", default=30, cast=int)
-SCRAPER_MAX_SEARCH_COMBINATIONS = config("SCRAPER_MAX_SEARCH_COMBINATIONS", default=18, cast=int)
-SCRAPER_DAILY_HOUR = config("SCRAPER_DAILY_HOUR", default=8, cast=int)
-SCRAPER_DAILY_MINUTE = config("SCRAPER_DAILY_MINUTE", default=0, cast=int)
-SCRAPER_HEADLESS = config("SCRAPER_HEADLESS", default=True, cast=bool)
-SCRAPER_REQUEST_DELAY = config("SCRAPER_REQUEST_DELAY", default=2, cast=int)
+SCRAPER_MAX_JOBS_PER_SEARCH = int(os.environ.get("SCRAPER_MAX_JOBS_PER_SEARCH", 30))
+SCRAPER_MAX_SEARCH_COMBINATIONS = int(os.environ.get("SCRAPER_MAX_SEARCH_COMBINATIONS", 18))
+SCRAPER_DAILY_HOUR = int(os.environ.get("SCRAPER_DAILY_HOUR", 8))
+SCRAPER_DAILY_MINUTE = int(os.environ.get("SCRAPER_DAILY_MINUTE", 0))
+SCRAPER_HEADLESS = True
+SCRAPER_REQUEST_DELAY = int(os.environ.get("SCRAPER_REQUEST_DELAY", 2))
 
 # LinkedIn credentials
-LINKEDIN_EMAIL = config("LINKEDIN_EMAIL", default="")
-LINKEDIN_PASSWORD = config("LINKEDIN_PASSWORD", default="")
+LINKEDIN_EMAIL = os.environ.get("LINKEDIN_EMAIL", "")
+LINKEDIN_PASSWORD = os.environ.get("LINKEDIN_PASSWORD", "")
 
-# Encryption key for credential storage
-CREDENTIAL_ENCRYPTION_KEY = config("CREDENTIAL_ENCRYPTION_KEY", default="")
+# Encryption key
+CREDENTIAL_ENCRYPTION_KEY = os.environ.get("CREDENTIAL_ENCRYPTION_KEY", "")
 
 
 # ─────────────────────────────────────────────
-#  Logging
+#  CELERY — Disabled (no Redis on PythonAnywhere)
+# ─────────────────────────────────────────────
+
+CELERY_BROKER_URL = "memory://"
+CELERY_RESULT_BACKEND = "cache+memory://"
+
+
+# ─────────────────────────────────────────────
+#  LOGGING
 # ─────────────────────────────────────────────
 
 LOGGING = {
@@ -214,7 +201,7 @@ LOGGING = {
         },
         "django": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": "WARNING",
             "propagate": True,
         },
     },

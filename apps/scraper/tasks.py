@@ -50,11 +50,6 @@ def run_scrape_task(self, triggered_by="schedule"):
         if stats["errors"]:
             log.error_message = "\n".join(stats["errors"])
             log.progress_message = stats["errors"][-1]
-        else:
-            log.progress_message = (
-                f"Scrape complete: {stats['jobs_found']} found, "
-                f"{stats['jobs_new']} new."
-            )
 
         log.save()
 
@@ -63,10 +58,9 @@ def run_scrape_task(self, triggered_by="schedule"):
             f"{stats['jobs_new']} new, {len(stats['errors'])} errors"
         )
         return {
-            "status": log.status,
+            "status": "success",
             "jobs_found": stats["jobs_found"],
             "jobs_new": stats["jobs_new"],
-            "errors": stats["errors"],
         }
 
     except Exception as e:

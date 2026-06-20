@@ -28,13 +28,36 @@ def main():
             print("\n*** Action Required ***")
             print("Please log in manually in the opened browser window.")
             print("Solve any CAPTCHAs or 2FA checks.")
-            input("Once you see your LinkedIn feed, return here and press Enter to save your session...")
+            print("After you see your LinkedIn feed, press Enter here to save your session...")
+            
+            # Wait for user input
+            input("Press Enter after logging in...")
+            
+            # Verify user is actually logged in before saving
+            print("Verifying login status...")
+            await page.goto('https://www.linkedin.com/feed/')
+            await page.wait_for_timeout(3000)
+            
+            # Check if we're on the feed page (logged in) or still on login page
+            current_url = page.url
+            if '/login' in current_url or 'login' in current_url:
+                print("\n⚠️  WARNING: You are still on the login page!")
+                print("The session will NOT be saved until you complete login.")
+                print("Please log in first, then press Enter again.")
+                input("Press Enter after you see your LinkedIn feed...")
+                await page.goto('https://www.linkedin.com/feed/')
+                await page.wait_for_timeout(3000)
+                current_url = page.url
             
             # Ensure the directory exists
             os.makedirs("linkedin_session", exist_ok=True)
             await context.storage_state(path='linkedin_session/session.json')
             await browser.close()
-            print("\nSession saved successfully to linkedin_session/session.json!")
+            
+            if '/feed' in current_url or '/jobs' in current_url:
+                print("\n✅ Session saved successfully to linkedin_session/session.json!")
+            else:
+                print("\n⚠️  Session saved, but login status is uncertain. Current URL:", current_url)
 
     try:
         asyncio.run(run_login())

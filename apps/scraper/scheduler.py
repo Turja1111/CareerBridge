@@ -13,6 +13,9 @@ def startup_scrape_check():
     """
     Check if a scrape already ran today.
     If not, trigger a background scrape task.
+
+    On PythonAnywhere (no Celery), this just logs a message.
+    Use the run_scrape management command or scheduled task instead.
     """
     try:
         from .models import ScrapeLog
@@ -25,8 +28,15 @@ def startup_scrape_check():
 
         if not already_ran:
             logger.info("No scrape today — scheduling startup scrape...")
-            from .tasks import run_scrape_task
-            run_scrape_task.delay(triggered_by="startup")
+            try:
+                from .tasks import run_scrape_task
+                run_scrape_task.delay(triggered_by="startup")
+            except Exception:
+                # Celery not available (e.g., PythonAnywhere)
+                logger.info(
+                    "Celery not available. Use 'python manage.py run_scrape' "
+                    "or set up a scheduled task on PythonAnywhere."
+                )
         else:
             logger.info("Scrape already ran/running today. Skipping.")
 

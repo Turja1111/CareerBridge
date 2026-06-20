@@ -16,11 +16,14 @@ build/
 venv/
 .venv/
 env/
+.virtualenvs/
 
 # Environment & Secrets
 .env
 .env.local
 .env.production
+.env.pythonanywhere
+*.env
 
 # Django
 db.sqlite3
@@ -31,6 +34,14 @@ media/
 # LinkedIn Session (sensitive)
 linkedin_session/
 *.json.bak
+state.json
+*.session
+*.session.json
+
+# Playwright
+playwright-report/
+test-results/
+storage-state.json
 
 # IDE
 .vscode/
@@ -46,7 +57,30 @@ desktop.ini
 
 # Docker
 *.log
+docker-compose.override.yml
 
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+# Database Backups
+*.sql
+*.sql.gz
+*.dump
+
+# Logs
+logs/
+*.log
+
+# PythonAnywhere
+pythonanywhere_task.py.log
+
+# Migration backups
+*.bak
+
+# Playwright browser data
+playwright/
+ms-playwright/
+
+# Local settings override
+local_settings.py

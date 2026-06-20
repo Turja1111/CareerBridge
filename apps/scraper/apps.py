@@ -11,7 +11,8 @@ class ScraperConfig(AppConfig):
         import os
 
         # Only run in the main process, not in migrations or shell
-        if os.environ.get("RUN_MAIN") == "true":
+        # On PythonAnywhere, RUN_MAIN is not set, so skip auto-startup
+        if os.environ.get("RUN_MAIN") == "true" or os.environ.get("PYTHONANYWHERE_DOMAIN"):
             try:
                 from .scheduler import startup_scrape_check
                 startup_scrape_check()

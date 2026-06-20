@@ -445,7 +445,6 @@ SKILL_KEYWORDS = {
     "SQL": ["sql", "postgresql", "mysql", "database"],
     "Docker": ["docker", "container", "kubernetes", "k8s"],
     "AWS": ["aws", "amazon web services", "ec2", "s3", "lambda"],
-    # ... 100+ skills
 }
 ```
 

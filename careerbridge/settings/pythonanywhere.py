@@ -22,7 +22,7 @@ SECRET_KEY = os.environ.get(
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    "turja221b.pythonanywhere.com",
+    "turja221bb.pythonanywhere.com",
     "localhost",
     "127.0.0.1",
 ]

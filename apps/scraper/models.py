@@ -5,11 +5,21 @@ Scraper — Models for LinkedIn credentials, scrape logs, and user preferences.
 from django.db import models
 from apps.core.models import TimeStampedModel
 
-# PostgreSQL uses ArrayField; SQLite falls back to JSONField
-try:
-    from django.contrib.postgres.fields import ArrayField
-except ImportError:
-    from django.db.models import JSONField as ArrayField
+from django.db import connection
+from django.db.models import JSONField
+
+# Check if using SQLite database engine
+if connection.settings_dict.get('ENGINE', '').endswith('sqlite3'):
+    class ArrayField(JSONField):
+        def __init__(self, base_field=None, size=None, **kwargs):
+            super().__init__(**kwargs)
+else:
+    try:
+        from django.contrib.postgres.fields import ArrayField
+    except ImportError:
+        class ArrayField(JSONField):
+            def __init__(self, base_field=None, size=None, **kwargs):
+                super().__init__(**kwargs)
 
 
 class LinkedInCredential(TimeStampedModel):

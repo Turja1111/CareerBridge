@@ -1,5 +1,5 @@
 /**
- * CareerBridge — Market Intelligence Analytics Chart Rendering
+ * CareerBridge - Market Intelligence Analytics Chart Rendering
  * Powered by ApexCharts and Django DRF APIs
  */
 

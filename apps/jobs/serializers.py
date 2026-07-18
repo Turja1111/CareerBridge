@@ -35,6 +35,9 @@ class JobPostListSerializer(serializers.ModelSerializer):
         model = JobPost
         fields = [
             "id",
+            "source",
+            "source_label",
+            "source_job_id",
             "linkedin_job_id",
             "title",
             "company_name",
@@ -44,9 +47,14 @@ class JobPostListSerializer(serializers.ModelSerializer):
             "salary_display",
             "experience_level",
             "date_posted",
+            "application_deadline",
             "apply_url",
+            "canonical_url",
             "skills",
             "status",
+            "match_score",
+            "match_reasons",
+            "missing_skills",
             "is_active",
             "is_new",
             "scraped_at",
@@ -65,6 +73,10 @@ class JobPostDetailSerializer(serializers.ModelSerializer):
         model = JobPost
         fields = [
             "id",
+            "source",
+            "source_label",
+            "source_job_id",
+            "source_url",
             "linkedin_job_id",
             "title",
             "company",
@@ -77,9 +89,18 @@ class JobPostDetailSerializer(serializers.ModelSerializer):
             "salary_display",
             "experience_level",
             "date_posted",
+            "application_deadline",
             "apply_url",
+            "canonical_url",
             "skills",
             "status",
+            "match_score",
+            "match_reasons",
+            "missing_skills",
+            "application_notes",
+            "resume_version",
+            "applied_at",
+            "follow_up_on",
             "is_active",
             "is_new",
             "scraped_at",
@@ -92,3 +113,5 @@ class JobStatusUpdateSerializer(serializers.Serializer):
 
     status = serializers.ChoiceField(choices=JobPost.STATUS_CHOICES)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
+    resume_version = serializers.CharField(required=False, allow_blank=True, default="")
+    follow_up_on = serializers.DateField(required=False, allow_null=True)

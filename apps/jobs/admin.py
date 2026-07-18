@@ -30,6 +30,8 @@ class JobPostAdmin(admin.ModelAdmin):
     list_display = (
         "title",
         "company",
+        "source",
+        "match_score",
         "location",
         "work_type",
         "status",
@@ -37,8 +39,15 @@ class JobPostAdmin(admin.ModelAdmin):
         "date_posted",
         "is_active",
     )
-    list_filter = ("work_type", "status", "experience_level", "is_active")
-    search_fields = ("title", "company__name", "location", "description")
+    list_filter = ("source", "work_type", "status", "experience_level", "is_active")
+    search_fields = (
+        "title",
+        "company__name",
+        "location",
+        "description",
+        "source_job_id",
+        "linkedin_job_id",
+    )
     date_hierarchy = "date_posted"
     inlines = [JobSkillInline]
     readonly_fields = ("scraped_at", "created_at", "updated_at")
@@ -46,5 +55,5 @@ class JobPostAdmin(admin.ModelAdmin):
 
 @admin.register(UserJobStatus)
 class UserJobStatusAdmin(admin.ModelAdmin):
-    list_display = ("job", "status", "updated_at")
+    list_display = ("job", "status", "follow_up_on", "updated_at")
     list_filter = ("status",)

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Scraper Control Panel — CareerBridge{% endblock %}
+{% block title %}Scraper Control Panel - CareerBridge{% endblock %}
 
 {% block header_title %}Scraper Control Panel{% endblock %}
 
@@ -44,16 +44,59 @@
                         {% if last_success %}
                             {{ last_success.jobs_new }} new / {{ last_success.jobs_found }} total
                         {% else %}
-                            —
+                            -
                         {% endif %}
                     </span>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 12px; align-items: center;">
+            <!-- Stuck scraper warning banner (hidden by default, shown by JS) -->
+            <div id="stuck-warning-banner" style="
+                display: none;
+                margin-bottom: 16px;
+                padding: 12px 16px;
+                background: rgba(239, 68, 68, 0.12);
+                border: 1px solid rgba(239, 68, 68, 0.4);
+                border-radius: 10px;
+                color: #f87171;
+                font-size: 13px;
+                display: none;
+                align-items: center;
+                gap: 10px;
+            ">
+                <i data-lucide="alert-triangle" style="flex-shrink:0; width:16px; height:16px;"></i>
+                <span id="stuck-warning-text">Scraper has been running for a long time and may be stuck.</span>
+            </div>
+
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                 <button id="trigger-scrape-btn" class="btn btn-primary" {% if is_running %}disabled{% endif %} style="padding: 12px 24px; border-radius: 10px;">
                     <i data-lucide="play" id="trigger-btn-icon"></i> <span id="trigger-btn-text">Trigger Scraper Now</span>
                 </button>
+
+                <!-- Force Stop button: visible only while scraper is running -->
+                <button
+                    id="force-stop-btn"
+                    class="btn"
+                    style="
+                        padding: 12px 24px;
+                        border-radius: 10px;
+                        background: rgba(239, 68, 68, 0.15);
+                        border: 1px solid rgba(239, 68, 68, 0.5);
+                        color: #f87171;
+                        font-weight: 600;
+                        cursor: pointer;
+                        display: {% if is_running %}flex{% else %}none{% endif %};
+                        align-items: center;
+                        gap: 8px;
+                        transition: all 0.2s;
+                    "
+                    onmouseover="this.style.background='rgba(239,68,68,0.28)'"
+                    onmouseout="this.style.background='rgba(239,68,68,0.15)'"
+                >
+                    <i data-lucide="square" style="width:14px;height:14px;"></i>
+                    <span id="force-stop-text">Force Stop</span>
+                </button>
+
                 <span id="trigger-status-msg" style="font-size: 13px; color: var(--text-secondary);">
                     {% if is_running %}Background process running. Real-time updates active.{% endif %}
                 </span>
@@ -91,7 +134,7 @@
                                 </span>
                             </td>
                             <td style="padding: 12px 8px;">{{ log.jobs_found }} / {{ log.jobs_new }}</td>
-                            <td style="padding: 12px 8px;">{{ log.duration|default:"—" }}s</td>
+                            <td style="padding: 12px 8px;">{{ log.duration|default:"-" }}s</td>
                             <td style="padding: 12px 8px; color: {% if log.status == 'failed' %}var(--color-ignored){% else %}var(--text-secondary){% endif %}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{% if log.status == 'running' %}{{ log.progress_message }}{% else %}{{ log.error_message }}{% endif %}">
                                 {% if log.status == 'running' %}
                                     {{ log.progress_message|default:"Running..." }}

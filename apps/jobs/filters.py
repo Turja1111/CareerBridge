@@ -12,6 +12,7 @@ class JobPostFilter(django_filters.FilterSet):
     search = django_filters.CharFilter(method="filter_search", label="Search")
     work_type = django_filters.ChoiceFilter(choices=JobPost.WORK_TYPE_CHOICES)
     status = django_filters.ChoiceFilter(choices=JobPost.STATUS_CHOICES)
+    source = django_filters.ChoiceFilter(choices=JobPost.SOURCE_CHOICES)
     skill = django_filters.CharFilter(method="filter_skill", label="Skill")
     company = django_filters.CharFilter(
         field_name="company__name", lookup_expr="icontains"
@@ -21,6 +22,9 @@ class JobPostFilter(django_filters.FilterSet):
     )
     date_from = django_filters.DateFilter(field_name="date_posted", lookup_expr="gte")
     date_to = django_filters.DateFilter(field_name="date_posted", lookup_expr="lte")
+    deadline_from = django_filters.DateFilter(field_name="application_deadline", lookup_expr="gte")
+    deadline_to = django_filters.DateFilter(field_name="application_deadline", lookup_expr="lte")
+    min_match = django_filters.NumberFilter(field_name="match_score", lookup_expr="gte")
     is_active = django_filters.BooleanFilter()
 
     class Meta:
@@ -28,6 +32,7 @@ class JobPostFilter(django_filters.FilterSet):
         fields = [
             "work_type",
             "status",
+            "source",
             "experience_level",
             "is_active",
         ]

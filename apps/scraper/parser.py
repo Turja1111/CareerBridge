@@ -222,11 +222,11 @@ def parse_salary(text: str) -> dict:
     # Detect currency
     currency = "USD"
     currency_map = {
-        "৳": "BDT", "tk": "BDT", "bdt": "BDT", "taka": "BDT",
+        "\u09f3": "BDT", "tk": "BDT", "bdt": "BDT", "taka": "BDT",
         "$": "USD", "usd": "USD",
-        "€": "EUR", "eur": "EUR",
-        "£": "GBP", "gbp": "GBP",
-        "₹": "INR", "inr": "INR",
+        "\u20ac": "EUR", "eur": "EUR",
+        "\u00a3": "GBP", "gbp": "GBP",
+        "\u20b9": "INR", "inr": "INR",
     }
     for symbol, curr in currency_map.items():
         if symbol in text.lower():
@@ -235,8 +235,8 @@ def parse_salary(text: str) -> dict:
 
     # Try to find salary range patterns
     patterns = [
-        r'(\d+)\s*[-–—to]+\s*(\d+)',  # "3000 - 5000" or "3000 to 5000"
-        r'(\d+)k\s*[-–—to]+\s*(\d+)k',  # "3k - 5k"
+        r'(\d+)\s*(?:-|to|\u2013|\u2014)+\s*(\d+)',  # "3000 - 5000" or "3000 to 5000"
+        r'(\d+)k\s*(?:-|to|\u2013|\u2014)+\s*(\d+)k',  # "3k - 5k"
         r'(\d+)',  # Single number
     ]
 

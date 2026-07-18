@@ -1,5 +1,5 @@
 /**
- * CareerBridge — Job interactions (Asynchronous status updates)
+ * CareerBridge - Job interactions (Asynchronous status updates)
  */
 
 document.addEventListener("DOMContentLoaded", function() {

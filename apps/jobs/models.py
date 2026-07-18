@@ -9,7 +9,7 @@ from apps.core.models import TimeStampedModel
 
 
 class Company(TimeStampedModel):
-    """A company that posts jobs on LinkedIn."""
+    """A company that posts jobs across tracked platforms."""
 
     name = models.CharField(max_length=255)
     linkedin_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
@@ -51,7 +51,17 @@ class Skill(TimeStampedModel):
 
 
 class JobPost(TimeStampedModel):
-    """A LinkedIn job posting."""
+    """A job posting collected from LinkedIn, BDJobs, or another source."""
+
+    SOURCE_CHOICES = [
+        ("linkedin", "LinkedIn"),
+        ("bdjobs", "BDJobs"),
+        ("chakri", "Chakri"),
+        ("skill_jobs", "Skill.jobs"),
+        ("company", "Company Career Page"),
+        ("manual", "Manual Import"),
+        ("other", "Other"),
+    ]
 
     WORK_TYPE_CHOICES = [
         ("Remote", "Remote"),
@@ -70,11 +80,22 @@ class JobPost(TimeStampedModel):
     STATUS_CHOICES = [
         ("new", "New"),
         ("saved", "Saved"),
+        ("shortlisted", "Shortlisted"),
         ("applied", "Applied"),
+        ("interview", "Interview"),
+        ("rejected", "Rejected"),
+        ("offer", "Offer"),
         ("ignored", "Ignored"),
     ]
 
-    linkedin_job_id = models.CharField(max_length=50, unique=True)
+    source = models.CharField(
+        max_length=30, choices=SOURCE_CHOICES, default="linkedin", db_index=True
+    )
+    source_job_id = models.CharField(max_length=120, blank=True, db_index=True)
+    source_url = models.URLField(max_length=1000, blank=True)
+    linkedin_job_id = models.CharField(
+        max_length=50, unique=True, null=True, blank=True
+    )
     title = models.CharField(max_length=255)
     company = models.ForeignKey(
         Company,
@@ -97,20 +118,38 @@ class JobPost(TimeStampedModel):
         blank=True,
     )
     date_posted = models.DateField(null=True, blank=True)
+    application_deadline = models.DateField(null=True, blank=True)
     apply_url = models.URLField(max_length=1000, blank=True)
     skills = models.ManyToManyField(Skill, through="JobSkill", blank=True)
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="new"
     )
+    match_score = models.PositiveSmallIntegerField(default=0)
+    match_reasons = models.JSONField(default=list, blank=True)
+    missing_skills = models.JSONField(default=list, blank=True)
+    application_notes = models.TextField(blank=True)
+    resume_version = models.CharField(max_length=120, blank=True)
+    applied_at = models.DateTimeField(null=True, blank=True)
+    follow_up_on = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     scraped_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-scraped_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["source", "source_job_id"],
+                condition=~models.Q(source_job_id=""),
+                name="unique_job_per_source",
+            )
+        ]
         indexes = [
+            models.Index(fields=["source", "source_job_id"]),
             models.Index(fields=["date_posted"]),
+            models.Index(fields=["application_deadline"]),
             models.Index(fields=["work_type"]),
             models.Index(fields=["status"]),
+            models.Index(fields=["match_score"]),
             models.Index(fields=["is_active"]),
         ]
 
@@ -123,7 +162,7 @@ class JobPost(TimeStampedModel):
         """Formatted salary range string."""
         if self.salary_min and self.salary_max:
             currency = self.salary_currency or "$"
-            return f"{currency}{self.salary_min:,} – {currency}{self.salary_max:,}"
+            return f"{currency}{self.salary_min:,} - {currency}{self.salary_max:,}"
         elif self.salary_min:
             currency = self.salary_currency or "$"
             return f"From {currency}{self.salary_min:,}"
@@ -135,7 +174,7 @@ class JobPost(TimeStampedModel):
         text = self.description or ""
         lines = []
         for raw in text.splitlines():
-            cleaned = re.sub(r"^\s*[-*•]\s*", "", raw).strip()
+            cleaned = re.sub(r"^\s*[-*\u2022]\s*", "", raw).strip()
             if cleaned:
                 lines.append(cleaned)
 
@@ -143,7 +182,7 @@ class JobPost(TimeStampedModel):
             return lines
 
         fallback = re.split(r"(?<=[.;])\s+", text)
-        return [item.strip(" •-") for item in fallback if item.strip()]
+        return [item.strip(" \u2022-") for item in fallback if item.strip()]
 
     @property
     def bullet_sections(self):
@@ -160,7 +199,7 @@ class JobPost(TimeStampedModel):
 
         # Normalize bullets and separators
         norm = text.replace('\r', '\n')
-        norm = norm.replace('•', '\n•')
+        norm = norm.replace('\u2022', '\n\u2022')
         # Split into raw lines
         raw_lines = [ln.strip() for ln in norm.splitlines() if ln.strip()]
 
@@ -182,11 +221,11 @@ class JobPost(TimeStampedModel):
             bullets = []
             for item in current_buf:
                 # If item starts with a bullet marker, strip it
-                cleaned = re.sub(r'^[-*•]\s*', '', item).strip()
+                cleaned = re.sub(r'^[-*\u2022]\s*', '', item).strip()
                 # Split by semicolon or sentence boundary
                 parts = re.split(r'[;\u2022]|(?<=[.?!])\s+', cleaned)
                 for p in parts:
-                    s = p.strip(' •-:')
+                    s = p.strip(' \u2022-:')
                     if not s:
                         continue
                     # Shorten extremely long sentences by breaking on commas
@@ -225,7 +264,7 @@ class JobPost(TimeStampedModel):
             title, bullets = sections[0]
             if len(bullets) == 1 and len(bullets[0]) > 180:
                 parts = re.split(r'(?<=[.;])\s+', bullets[0])
-                sections[0] = (title, [p.strip(' •-') for p in parts if p.strip()])
+                sections[0] = (title, [p.strip(' \u2022-') for p in parts if p.strip()])
 
         return sections
     @property
@@ -235,6 +274,16 @@ class JobPost(TimeStampedModel):
         from datetime import timedelta
 
         return self.scraped_at >= timezone.now() - timedelta(hours=24)
+
+    @property
+    def source_label(self):
+        """Human-readable platform label for badges and APIs."""
+        return dict(self.SOURCE_CHOICES).get(self.source, self.source.title())
+
+    @property
+    def canonical_url(self):
+        """Best outbound URL for applying or reviewing the original posting."""
+        return self.apply_url or self.source_url
 
 
 class JobSkill(models.Model):
@@ -247,7 +296,7 @@ class JobSkill(models.Model):
         unique_together = ("job", "skill")
 
     def __str__(self):
-        return f"{self.job.title} — {self.skill.name}"
+        return f"{self.job.title} - {self.skill.name}"
 
 
 class UserJobStatus(TimeStampedModel):
@@ -256,7 +305,11 @@ class UserJobStatus(TimeStampedModel):
     STATUS_CHOICES = [
         ("new", "New"),
         ("saved", "Saved"),
+        ("shortlisted", "Shortlisted"),
         ("applied", "Applied"),
+        ("interview", "Interview"),
+        ("rejected", "Rejected"),
+        ("offer", "Offer"),
         ("ignored", "Ignored"),
     ]
 
@@ -265,10 +318,12 @@ class UserJobStatus(TimeStampedModel):
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="new")
     notes = models.TextField(blank=True)
+    resume_version = models.CharField(max_length=120, blank=True)
+    follow_up_on = models.DateField(null=True, blank=True)
 
     class Meta:
         verbose_name = "User Job Status"
         verbose_name_plural = "User Job Statuses"
 
     def __str__(self):
-        return f"{self.job.title} — {self.status}"
+        return f"{self.job.title} - {self.status}"

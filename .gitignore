@@ -84,3 +84,20 @@ ms-playwright/
 
 # Local settings override
 local_settings.py
+
+# AI / Documentation (keep locally, not in repo)
+PROJECT_DOCUMENTATION.md
+PYTHONANYWHERE_GUIDE.md
+IMPROVEMENT_CHECKLIST.md
+implementation_plan.md
+
+# PythonAnywhere deployment (contains hardcoded paths/secrets)
+pythonanywhere_wsgi.py
+pythonanywhere_task.py
+
+# Utility scripts
+login.py
+
+# Agent config
+.agents/
+.puku/

@@ -65,6 +65,10 @@ class ScrapeLog(models.Model):
     triggered_by = models.CharField(
         max_length=20, choices=TRIGGER_CHOICES, default="manual"
     )
+    celery_task_id = models.CharField(
+        max_length=255, blank=True, null=True,
+        help_text="Celery task ID for revocation on force stop",
+    )
 
     class Meta:
         ordering = ["-started_at"]

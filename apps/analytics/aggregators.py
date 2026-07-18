@@ -1,9 +1,9 @@
 """
-Analytics — Aggregation functions for dashboard charts.
+Analytics - Aggregation functions for dashboard charts.
 All queries run against the Jobs app models.
 """
 
-from django.db.models import Count, Avg, Min, Max, Q, F
+from django.db.models import Count, Avg, Min, Max, Q
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from datetime import timedelta
@@ -62,6 +62,26 @@ def work_type_distribution():
         .annotate(count=Count("id"))
         .order_by("-count")
     )
+
+
+def source_distribution():
+    """Returns count per source platform."""
+    return list(
+        JobPost.objects.filter(is_active=True)
+        .values("source")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+
+
+def status_distribution():
+    """Returns status counts keyed for lightweight UI refreshes."""
+    rows = (
+        JobPost.objects.filter(is_active=True)
+        .values("status")
+        .annotate(count=Count("id"))
+    )
+    return {row["status"]: row["count"] for row in rows}
 
 
 def top_companies(limit=10):
@@ -131,7 +151,7 @@ def summary_stats():
         .order_by("-job_count")
         .values_list("name", flat=True)
         .first()
-    ) or "—"
+    ) or "-"
 
     avg_skills = 0
     jobs_with_skills = JobPost.objects.filter(is_active=True).annotate(
@@ -147,4 +167,8 @@ def summary_stats():
         "total_companies": total_companies,
         "top_skill": top_skill,
         "avg_skills_per_job": avg_skills,
+        "total_jobs_by_status": status_distribution(),
+        "total_jobs_by_source": {
+            row["source"]: row["count"] for row in source_distribution()
+        },
     }

@@ -183,6 +183,11 @@ SCRAPER_REQUEST_DELAY = config("SCRAPER_REQUEST_DELAY", default=2, cast=int)
 LINKEDIN_EMAIL = config("LINKEDIN_EMAIL", default="")
 LINKEDIN_PASSWORD = config("LINKEDIN_PASSWORD", default="")
 
+# BDJobs credentials
+BDJOBS_EMAIL = config("BDJOBS_EMAIL", default="")
+BDJOBS_PASSWORD = config("BDJOBS_PASSWORD", default="")
+SCRAPER_ENABLE_BDJOBS = config("SCRAPER_ENABLE_BDJOBS", default=True, cast=bool)
+
 # Encryption key for credential storage
 CREDENTIAL_ENCRYPTION_KEY = config("CREDENTIAL_ENCRYPTION_KEY", default="")
 

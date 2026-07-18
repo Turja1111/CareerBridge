@@ -11,7 +11,6 @@ from datetime import timedelta
 from .models import JobPost
 from .serializers import JobPostListSerializer, JobPostDetailSerializer, JobStatusUpdateSerializer
 from .filters import JobPostFilter
-from .utils import is_relevant_job
 
 
 class JobPostViewSet(viewsets.ReadOnlyModelViewSet):
@@ -29,8 +28,7 @@ class JobPostViewSet(viewsets.ReadOnlyModelViewSet):
     ordering = ["-scraped_at"]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        return [job for job in queryset if is_relevant_job(job)]
+        return super().get_queryset()
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -49,7 +47,20 @@ def update_job_status(request, pk):
     serializer = JobStatusUpdateSerializer(data=request.data)
     if serializer.is_valid():
         job.status = serializer.validated_data["status"]
-        job.save(update_fields=["status", "updated_at"])
+        update_fields = ["status", "updated_at"]
+        if "notes" in serializer.validated_data:
+            job.application_notes = serializer.validated_data["notes"]
+            update_fields.append("application_notes")
+        if "resume_version" in serializer.validated_data:
+            job.resume_version = serializer.validated_data["resume_version"]
+            update_fields.append("resume_version")
+        if "follow_up_on" in serializer.validated_data:
+            job.follow_up_on = serializer.validated_data["follow_up_on"]
+            update_fields.append("follow_up_on")
+        if job.status == "applied" and not job.applied_at:
+            job.applied_at = timezone.now()
+            update_fields.append("applied_at")
+        job.save(update_fields=update_fields)
         return Response({"status": job.status, "id": job.id})
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

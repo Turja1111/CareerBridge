@@ -46,6 +46,10 @@ def job_list(request):
     if status_filter:
         queryset = queryset.filter(status=status_filter)
 
+    source_filter = request.GET.get("source", "")
+    if source_filter:
+        queryset = queryset.filter(source=source_filter)
+
     skill_filter = request.GET.get("skill", "")
     if skill_filter:
         queryset = queryset.filter(skills__name__iexact=skill_filter)
@@ -60,7 +64,7 @@ def job_list(request):
 
     # --- Sorting ---
     sort_by = request.GET.get("sort", "-scraped_at")
-    if sort_by in ("-scraped_at", "-date_posted", "title", "company__name"):
+    if sort_by in ("-match_score", "-scraped_at", "-date_posted", "title", "company__name"):
         queryset = queryset.order_by(sort_by)
 
     # --- Distinct (needed after M2M filter) ---
@@ -92,6 +96,22 @@ def job_list(request):
         .filter(job_count__gt=0)
         .order_by("-job_count")[:10]
     )
+    source_counts = (
+        JobPost.objects.filter(is_active=True)
+        .exclude(status="ignored")
+        .values("source")
+        .annotate(job_count=Count("id"))
+        .order_by("-job_count")
+    )
+    source_labels = dict(JobPost.SOURCE_CHOICES)
+    sources_list = [
+        {
+            "value": item["source"],
+            "label": source_labels.get(item["source"], item["source"].title()),
+            "job_count": item["job_count"],
+        }
+        for item in source_counts
+    ]
 
     # --- Counts ---
     total_jobs = len(jobs)
@@ -107,12 +127,14 @@ def job_list(request):
         "search_query": search_query,
         "work_type": work_type,
         "status_filter": status_filter,
+        "source_filter": source_filter,
         "skill_filter": skill_filter,
         "company_filter": company_filter,
         "experience_filter": experience_filter,
         "sort_by": sort_by,
         "skills_list": skills_list,
         "companies_list": companies_list,
+        "sources_list": sources_list,
         "total_jobs": total_jobs,
         "new_today": new_today,
         "saved_count": saved_count,

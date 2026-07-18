@@ -1,177 +1,154 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ job.title }} at {{ job.company.name }} — CareerBridge{% endblock %}
-
+{% block title %}{{ job.title }} - CareerBridge{% endblock %}
 {% block header_title %}Job Detail{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 20px;">
-    <a href="{% url 'jobs:list' %}" class="btn btn-secondary" style="padding: 8px 16px;">
-        <i data-lucide="arrow-left" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i> Back to Job Board
+<div style="margin-bottom: 14px;">
+    <a href="{% url 'jobs:list' %}" class="btn btn-secondary">
+        <i data-lucide="arrow-left"></i>
+        Back to jobs
     </a>
 </div>
 
 <div class="detail-grid">
-    <!-- Left Column: Job Description & Core Details -->
-    <div style="display: flex; flex-direction: column; gap: 24px;">
-        <div class="glass-panel" style="padding: 32px;">
-            <!-- Header section of the job details -->
-            <div class="detail-header" style="flex-wrap: wrap; gap: 20px;">
-                <div style="display: flex; gap: 20px; align-items: center;">
-                    <div class="company-logo" style="width: 64px; height: 64px; font-size: 24px; border-radius: 12px;">
-                        {% if job.company.logo_url %}
-                            <img src="{{ job.company.logo_url }}" alt="{{ job.company.name }}">
-                        {% else %}
-                            {{ job.company.name|slice:":2"|upper }}
-                        {% endif %}
-                    </div>
-                    <div>
-                        <h1 style="font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                            {{ job.title }}
-                            <span class="badge badge-status badge-{% if job.status == 'new' %}new{% elif job.status == 'saved' %}saved{% elif job.status == 'applied' %}applied{% else %}ignored{% endif %}" id="status-badge-{{ job.pk }}">
-                                {{ job.status|upper }}
-                            </span>
-                        </h1>
-                        <div class="job-meta-subtitle" style="font-size: 14px;">
-                            <span style="font-weight: 600; color: var(--text-primary);">{{ job.company.name }}</span>
-                            <span>📍 {{ job.location }}</span>
-                            <span>📅 Posted {{ job.date_posted|date:"M d, Y" }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Status Update Buttons -->
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <button class="btn-icon status-update-btn {% if job.status == 'saved' %}active{% endif %}" data-job-id="{{ job.pk }}" data-status="saved" title="Save job" style="padding: 10px; {% if job.status == 'saved' %}border-color: var(--color-saved); color: var(--color-saved); background: var(--bg-saved-light);{% endif %}">
-                        <i data-lucide="star" style="width: 18px; height: 18px;"></i>
-                    </button>
-                    <button class="btn-icon status-update-btn {% if job.status == 'applied' %}active{% endif %}" data-job-id="{{ job.pk }}" data-status="applied" title="Mark as applied" style="padding: 10px; {% if job.status == 'applied' %}border-color: var(--color-applied); color: var(--color-applied); background: var(--bg-applied-light);{% endif %}">
-                        <i data-lucide="check-circle-2" style="width: 18px; height: 18px;"></i>
-                    </button>
-                    <button class="btn-icon status-update-btn {% if job.status == 'ignored' %}active{% endif %}" data-job-id="{{ job.pk }}" data-status="ignored" title="Ignore job" style="padding: 10px; {% if job.status == 'ignored' %}border-color: var(--color-ignored); color: var(--color-ignored); background: var(--bg-ignored-light);{% endif %}">
-                        <i data-lucide="eye-off" style="width: 18px; height: 18px;"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Meta Badges Info -->
-            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 30px; padding: 16px; background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
-                <div style="flex: 1; min-width: 140px;">
-                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Work Type</div>
-                    <span class="badge badge-worktype" style="font-size: 12px; padding: 6px 12px;">{{ job.work_type }}</span>
-                </div>
-                {% if job.experience_level %}
-                <div style="flex: 1; min-width: 140px;">
-                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Experience Level</div>
-                    <span class="badge badge-exp" style="font-size: 12px; padding: 6px 12px;">{{ job.experience_level }}</span>
-                </div>
-                {% endif %}
-                {% if job.salary_display %}
-                <div style="flex: 1; min-width: 140px;">
-                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Salary Offered</div>
-                    <span class="badge badge-saved" style="font-size: 12px; padding: 6px 12px; background: rgba(245, 158, 11, 0.1);">{{ job.salary_display }}</span>
-                </div>
-                {% endif %}
-                <div style="flex: 1; min-width: 140px;">
-                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Scraped On</div>
-                    <span class="badge badge-worktype" style="font-size: 12px; padding: 6px 12px;">{{ job.scraped_at|date:"M d, Y H:i" }}</span>
-                </div>
-            </div>
-
-            <!-- Job Description Body -->
-            <div style="margin-bottom: 30px;">
-                <h3 style="font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">About the Job</h3>
-                <div class="detail-body-content" style="color: var(--text-primary); line-height: 1.6;">
-                    {% if job.description %}
-                        {{ job.description|linebreaks }}
+    <section class="glass-panel" style="padding: 22px;">
+        <div class="detail-header">
+            <div class="job-card-main">
+                <div class="company-logo" style="width: 68px; height: 68px;">
+                    {% if job.company.logo_url %}
+                        <img src="{{ job.company.logo_url }}" alt="{{ job.company.name }}">
                     {% else %}
-                        <p style="color: var(--text-secondary);">No detail text available for this posting.</p>
+                        {{ job.company.name|default:"CB"|slice:":2"|upper }}
                     {% endif %}
                 </div>
-            </div>
-
-            <!-- Apply CTA Button -->
-            {% if job.apply_url %}
-            <div style="border-top: 1px solid var(--border-color); padding-top: 24px; display: flex; gap: 16px; align-items: center;">
-                <a href="{{ job.apply_url }}" target="_blank" class="btn btn-primary" style="padding: 12px 30px; font-size: 15px; border-radius: 12px;">
-                    <i data-lucide="external-link" style="width: 18px; height: 18px;"></i> Apply on LinkedIn
-                </a>
-                <span style="font-size: 12px; color: var(--text-muted);">This link opens in a new browser tab.</span>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Right Column: Company, Skills, and Similar Jobs -->
-    <div style="display: flex; flex-direction: column; gap: 24px;">
-        <!-- Company Widget -->
-        <div class="glass-panel" style="padding: 24px;">
-            <h3 class="card-title" style="margin-bottom: 16px;">
-                <i data-lucide="building-2" style="color: var(--color-brand);"></i> Company Info
-            </h3>
-            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
                 <div>
-                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">Name</div>
-                    <span style="font-weight: 600;">{{ job.company.name }}</span>
-                </div>
-                {% if job.company.industry %}
-                <div>
-                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">Industry</div>
-                    <span>{{ job.company.industry }}</span>
-                </div>
-                {% endif %}
-                {% if job.company.website %}
-                <div>
-                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">Website</div>
-                    <a href="{{ job.company.website }}" target="_blank" class="hover-brand-text" style="color: var(--color-brand); display: flex; align-items: center; gap: 4px;">
-                        Visit website <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Skills Extracted Widget -->
-        <div class="glass-panel" style="padding: 24px;">
-            <h3 class="card-title" style="margin-bottom: 16px;">
-                <i data-lucide="tag" style="color: var(--color-saved);"></i> Required Skills
-            </h3>
-            {% if job.skills.all %}
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                {% for skill in job.skills.all %}
-                    <span class="skill-pill hover-grow" style="background-color: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.2); color: var(--text-primary); font-size: 12px; padding: 4px 10px;">{{ skill.name }}</span>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p style="font-size: 13px; color: var(--text-muted);">No skills extracted for this job post.</p>
-            {% endif %}
-        </div>
-
-        <!-- Similar Jobs Widget -->
-        <div class="glass-panel" style="padding: 24px;">
-            <h3 class="card-title" style="margin-bottom: 16px;">
-                <i data-lucide="sparkles" style="color: var(--color-new);"></i> Similar Openings
-            </h3>
-            <div style="display: flex; flex-direction: column; gap: 14px;">
-                {% for sim_job in similar_jobs %}
-                <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 10px; &:last-child { border-bottom: none; padding-bottom: 0; }">
-                    <a href="{% url 'jobs:detail' sim_job.pk %}" class="hover-brand-text" style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ sim_job.title }}</a>
-                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary);">
-                        <span>{{ sim_job.company.name }}</span>
-                        <span>{{ sim_job.work_type }}</span>
+                    <div class="job-card-topline">
+                        <span class="source-badge source-{{ job.source }}">{{ job.source_label }}</span>
+                        <span class="badge badge-status badge-{{ job.status }}" id="status-badge-{{ job.pk }}">{{ job.status|upper }}</span>
+                    </div>
+                    <h2 style="font-size: 28px; line-height: 1.2; margin: 6px 0;">{{ job.title }}</h2>
+                    <div class="job-meta-subtitle">
+                        <span>{{ job.company.name|default:"Unknown company" }}</span>
+                        <span><i data-lucide="map-pin"></i>{{ job.location|default:"Bangladesh" }}</span>
+                        {% if job.date_posted %}<span><i data-lucide="calendar"></i>Posted {{ job.date_posted|date:"M d, Y" }}</span>{% endif %}
                     </div>
                 </div>
-                {% empty %}
-                <p style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 12px 0;">No similar jobs found.</p>
+            </div>
+
+            <div class="match-panel">
+                <div class="match-score">
+                    <strong>{{ job.match_score }}</strong>
+                    <span>match</span>
+                </div>
+                <div class="job-actions">
+                    <button class="btn-icon status-update-btn {% if job.status == 'saved' %}active{% endif %}" data-job-id="{{ job.pk }}" data-status="saved" title="Save job">
+                        <i data-lucide="bookmark"></i>
+                    </button>
+                    <button class="btn-icon status-update-btn {% if job.status == 'applied' %}active{% endif %}" data-job-id="{{ job.pk }}" data-status="applied" title="Mark applied">
+                        <i data-lucide="check-circle-2"></i>
+                    </button>
+                    <button class="btn-icon status-update-btn {% if job.status == 'ignored' %}active{% endif %}" data-job-id="{{ job.pk }}" data-status="ignored" title="Ignore job">
+                        <i data-lucide="eye-off"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="job-tags" style="margin-bottom: 22px;">
+            <span class="badge badge-worktype">{{ job.work_type }}</span>
+            {% if job.experience_level %}<span class="badge badge-exp">{{ job.experience_level }}</span>{% endif %}
+            {% if job.application_deadline %}<span class="badge badge-deadline">Deadline {{ job.application_deadline|date:"M d, Y" }}</span>{% endif %}
+            {% if job.salary_display %}<span class="badge badge-saved">{{ job.salary_display }}</span>{% endif %}
+            <span class="badge badge-worktype">Scraped {{ job.scraped_at|date:"M d, H:i" }}</span>
+        </div>
+
+        {% if job.match_reasons %}
+        <div class="glass-panel" style="padding: 16px; margin-bottom: 22px; background: var(--bg-soft);">
+            <h3 class="card-title"><i data-lucide="sparkles"></i> Why this matches</h3>
+            <div class="job-tags">
+                {% for reason in job.match_reasons %}
+                    <span class="badge badge-applied">{{ reason }}</span>
                 {% endfor %}
             </div>
         </div>
-    </div>
+        {% endif %}
+
+        <div style="margin-bottom: 24px;">
+            <h3 class="card-title"><i data-lucide="file-text"></i> About the job</h3>
+            <div class="detail-body-content">
+                {% if job.description %}
+                    {{ job.description|linebreaks }}
+                {% else %}
+                    <p>No detailed description was captured for this posting.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if job.canonical_url %}
+        <a href="{{ job.canonical_url }}" target="_blank" class="btn btn-primary">
+            <i data-lucide="external-link"></i>
+            Apply on {{ job.source_label }}
+        </a>
+        {% endif %}
+    </section>
+
+    <aside class="insight-panel" style="position: static;">
+        <div class="insight-card">
+            <h3><i data-lucide="building-2"></i> Company</h3>
+            <div class="profile-stat">
+                <span>Name</span>
+                <strong>{{ job.company.name|default:"Unknown" }}</strong>
+            </div>
+            {% if job.company.industry %}
+            <div class="profile-stat">
+                <span>Industry</span>
+                <strong>{{ job.company.industry }}</strong>
+            </div>
+            {% endif %}
+            {% if job.company.website %}
+                <a href="{{ job.company.website }}" target="_blank" class="btn btn-secondary" style="width: 100%; margin-top: 12px;">Company website</a>
+            {% endif %}
+        </div>
+
+        <div class="insight-card">
+            <h3><i data-lucide="tags"></i> Skills</h3>
+            <div class="skill-cloud">
+                {% for skill in job.skills.all %}
+                    <span class="skill-pill">{{ skill.name }}</span>
+                {% empty %}
+                    <p class="muted">No skills extracted yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="insight-card">
+            <h3><i data-lucide="triangle-alert"></i> Skill gaps</h3>
+            <div class="skill-cloud">
+                {% for skill in job.missing_skills %}
+                    <span class="skill-pill">{{ skill }}</span>
+                {% empty %}
+                    <p class="muted">No major gaps detected from your target profile.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="insight-card">
+            <h3><i data-lucide="layers"></i> Similar openings</h3>
+            {% for sim_job in similar_jobs %}
+                <a href="{% url 'jobs:detail' sim_job.pk %}" class="insight-row">
+                    <span>{{ sim_job.title }}</span>
+                    <strong>{{ sim_job.match_score }}</strong>
+                </a>
+            {% empty %}
+                <p class="muted">No similar jobs found.</p>
+            {% endfor %}
+        </div>
+    </aside>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Import jobs interaction JS -->
 <script src="{% static 'js/jobs.js' %}"></script>
 {% endblock %}
